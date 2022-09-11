@@ -12,7 +12,7 @@ namespace GtfsProvider.Downloader.Krakow.Extensions
         public static IServiceCollection RegisterKrakowDownloader(this IServiceCollection services)
         {
             services.AddScoped<IDownloader, Downloader>();
-            services.AddScoped<VehicleDbBuilder>();
+            services.AddTransient<VehicleDbBuilder>();
             return services;
         }
     }

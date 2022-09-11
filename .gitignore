@@ -350,3 +350,5 @@ MigrationBackup/
 .ionide/
 
 FileStorage/
+
+mpk-ttss-mapping/

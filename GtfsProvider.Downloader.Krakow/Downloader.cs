@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CsvHelper;
 using GtfsProvider.Common;
+using GtfsProvider.Common.CityStorages;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
@@ -24,21 +25,24 @@ namespace GtfsProvider.Downloader.Krakow
         private const string _positionsFileTram = "VehiclePositions_T.pb";
         public City City => City.Krakow;
         private readonly IFileStorage _fileStorage;
-        private readonly ICityStorage _dataStorage;
+        private readonly IKrakowStorage _dataStorage;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly VehicleDbBuilder _vehicleDbBuilder;
+        private readonly VehicleDbBuilder _tramVehicleDbBuilder;
+        private readonly VehicleDbBuilder _busVehicleDbBuilder;
         private readonly Regex _fileRegex = new("<a href=\"([A-z\\.]+)\">([A-z\\.]+)<\\/a>\\s+([0-9]{2}-[A-z]{3}-[0-9]{4}\\s[0-9]{2}:[0-9]{2})", RegexOptions.Compiled | RegexOptions.Multiline);
 
         public Downloader(
             IFileStorage fileStorage,
             IDataStorage dataStorage,
             IHttpClientFactory httpClientFactory,
-            VehicleDbBuilder vehicleDbBuilder)
+            VehicleDbBuilder tramVehicleDbBuilder,
+            VehicleDbBuilder busVehicleDbBuilder)
         {
             _fileStorage = fileStorage;
-            _dataStorage = dataStorage[City];
+            _dataStorage = dataStorage[City] as IKrakowStorage ?? throw new InvalidOperationException("What is wrong with your DI configuration?!");
             _httpClientFactory = httpClientFactory;
-            _vehicleDbBuilder = vehicleDbBuilder;
+            _tramVehicleDbBuilder = tramVehicleDbBuilder;
+            _busVehicleDbBuilder = busVehicleDbBuilder;
         }
 
         public async Task RefreshIfNeeded()
@@ -59,8 +63,8 @@ namespace GtfsProvider.Downloader.Krakow
                 }
             }
 
-            await _vehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus);
-            await _vehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram);
+            await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus);
+            await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram);
 
             if((await _fileStorage.GetFileTime(City, _gtfZipBus)).HasValue)
                 await ParseGtfsZip(_gtfZipBus, VehicleType.Bus);
@@ -94,7 +98,7 @@ namespace GtfsProvider.Downloader.Krakow
                     }
                 }
 
-                var existingIds = (await _dataStorage.GetIdsByType(type))
+                var existingIds = (await _dataStorage.GetStopIdsByType(type))
                     .ToHashSet();
 
                 var toRemove = existingIds.ExceptIn(stops.Keys.ToHashSet());

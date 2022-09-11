@@ -12,11 +12,14 @@ namespace GtfsProvider.MemoryStorage
     public class MemoryDataStorage : IDataStorage
     {
         private readonly ConcurrentDictionary<City, ICityStorage> _cityStores;
-        public ICityStorage this[City city] => _cityStores.GetValueOrDefault(city, () => new MemoryCityStorage());
+        private readonly ICityStorageFactory _cityStoreFactory;
 
-        public MemoryDataStorage()
+        public ICityStorage this[City city] => _cityStores.GetValueOrDefault(city, () => _cityStoreFactory.GetCityStorage(city));
+
+        public MemoryDataStorage(ICityStorageFactory cityStoreFactory)
         {
             _cityStores = new ConcurrentDictionary<City, ICityStorage>();
+            _cityStoreFactory = cityStoreFactory;
         }
     }
 }
