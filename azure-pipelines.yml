@@ -1,0 +1,24 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- script: dotnet publish -c Release
+  displayName: 'dotnet publish Release'
+  workingDirectory: .
+
+- script: mkdir -p Output && cp azure-publish.sh Output/azure-publish.sh && tar -czf Output/artifact.tar.gz -C GtfsProvider.Api/bin/Release/net6.0/publish .
+  displayName: 'Move results to Output dir'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'Output'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
