@@ -1,5 +1,5 @@
 #!/bin/bash
-cd ~/deploy_temp && \
+cd ~/deploy_temp/gtfs && \
 echo "Stopping GTFS service..." && \
 sudo /usr/bin/systemctl_start gtfs && \
 echo "GTFS service stopped. Removing old app" && \
