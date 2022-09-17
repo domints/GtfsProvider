@@ -111,5 +111,19 @@ namespace GtfsProvider.MemoryStorage
         {
             return Task.FromResult(_vehiclesByGtfs.Values.AsReadOnly());
         }
+
+        public Task<IReadOnlyCollection<Vehicle>> GetVehiclesByTtssId(List<long> vehicleIds, VehicleType type)
+        {
+            var results = new List<Vehicle>();
+
+            foreach(var id in vehicleIds)
+            {
+                var vehicle = _vehiclesByTtss.GetValueOrDefault((id, type));
+                if(vehicle != null)
+                    results.Add(vehicle);
+            }
+
+            return Task.FromResult((IReadOnlyCollection<Vehicle>)results);
+        }
     }
 }

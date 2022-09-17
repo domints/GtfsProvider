@@ -46,6 +46,12 @@ app.MapGet("/vehicles", (IVehicleService vehicleService, CaseInsensitiveBind<Cit
     return vehicleService.GetAll(resolvedCity);
 });
 
+app.MapGet("/vehicles/manyByTtss", (IVehicleService vehicleService, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> type, CommaSeparated<long> ids) =>
+{
+    var resolvedCity = city ?? City.Krakow;
+    return vehicleService.GetByTtssId(resolvedCity, type, ids);
+});
+
 app.MapGet("/vehicles/byTtss", async (IVehicleService vehicleService, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> type, long id) =>
 {
     var resolvedCity = city ?? City.Krakow;

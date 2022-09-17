@@ -23,6 +23,7 @@ namespace GtfsProvider.Common
         Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle);
         Task<Vehicle?> GetVehicleByGtfsId(long vehicleId, VehicleType type);
         Task<Vehicle?> GetVehicleByTtssId(long vehicleId, VehicleType type);
+        Task<IReadOnlyCollection<Vehicle>> GetVehiclesByTtssId(List<long> vehicleIds, VehicleType type);
         Task<Vehicle?> GetVehicleBySideNo(string sideNo);
         Task<IReadOnlyCollection<Vehicle>> GetAllVehicles();
     }

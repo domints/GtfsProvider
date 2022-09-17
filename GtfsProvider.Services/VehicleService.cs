@@ -29,5 +29,12 @@ namespace GtfsProvider.Services
 
             return store.GetVehicleByTtssId(id, type);
         }
+
+        public Task<IReadOnlyCollection<Vehicle>> GetByTtssId(City city, VehicleType type, List<long> ids)
+        {
+            var store = _dataStorage[city];
+
+            return store.GetVehiclesByTtssId(ids, type);
+        }
     }
 }
