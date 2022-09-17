@@ -5,13 +5,20 @@ using System.Threading.Tasks;
 using GtfsProvider.Common;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Services.Models;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
 namespace GtfsProvider.Services
 {
     public class LocalFileStorage : IFileStorage
     {
-        private const string BasePath = "./FileStorage";
+        public LocalFileStorage(IConfiguration configuration)
+        {
+            BasePath = configuration["FileStoragePath"];
+        }
+
+        private readonly string BasePath;
+        
         public Task<DateTime?> GetFileTime(City city, string name)
         {
             var metadata = LoadMetadata(city).FirstOrDefault(m => m.Name == name);
