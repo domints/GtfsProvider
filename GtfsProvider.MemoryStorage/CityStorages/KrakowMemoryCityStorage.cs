@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Common.CityStorages;
 using GtfsProvider.Common.Enums;
+using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
 
 namespace GtfsProvider.MemoryStorage.CityStorages
@@ -12,10 +13,5 @@ namespace GtfsProvider.MemoryStorage.CityStorages
     {
         public long VehicleIdOffset { get; set;  }
         public override City City => City.Krakow;
-
-        public override Task<Vehicle?> GetVehicleByTtssId(long vehicleId)
-        {
-            return GetVehicleByGtfsId(vehicleId - VehicleIdOffset);
-        }
     }
 }

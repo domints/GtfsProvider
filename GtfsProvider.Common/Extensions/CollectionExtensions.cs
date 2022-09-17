@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,6 +60,21 @@ namespace GtfsProvider.Common.Extensions
                 if (!keys.Contains(item.Key))
                     yield return item.Value;
             }
+        }
+
+        public static IReadOnlyCollection<T> AsReadOnly<T>(this ICollection<T> source)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            return source as IReadOnlyCollection<T> ?? new ReadOnlyCollectionAdapter<T>(source);
+        }
+
+        sealed class ReadOnlyCollectionAdapter<T> : IReadOnlyCollection<T>
+        {
+            readonly ICollection<T> source;
+            public ReadOnlyCollectionAdapter(ICollection<T> source) => this.source = source;
+            public int Count => source.Count;
+            public IEnumerator<T> GetEnumerator() => source.GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
 }

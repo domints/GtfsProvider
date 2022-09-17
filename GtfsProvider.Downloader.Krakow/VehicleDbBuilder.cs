@@ -7,6 +7,7 @@ using GtfsProvider.Common.CityStorages;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
+using GtfsProvider.Downloader.Krakow.Kokon;
 using GtfsProvider.Downloader.Krakow.TTSS;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -21,8 +22,13 @@ namespace GtfsProvider.Downloader.Krakow
         private readonly IKrakowStorage _storage;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<VehicleDbBuilder> _logger;
-        private const string busMatchRulesUrl = "https://raw.githubusercontent.com/jacekkow/mpk-ttss-mapping/master/lib/BusTypes.php";
-        private const string tramMatchRulesUrl = "https://raw.githubusercontent.com/jacekkow/mpk-ttss-mapping/master/lib/TramTypes.php";
+
+        // private const string busMatchRulesUrl = "https://raw.githubusercontent.com/jacekkow/mpk-ttss-mapping/master/lib/BusTypes.php";
+        // private const string tramMatchRulesUrl = "https://raw.githubusercontent.com/jacekkow/mpk-ttss-mapping/master/lib/TramTypes.php";
+
+        // I have more control over my fork so I can add vehicles if Jacek doesn't notice them and create fork to his repo
+        private const string busMatchRulesUrl = "https://raw.githubusercontent.com/domints/mpk-ttss-mapping/master/lib/BusTypes.php";
+        private const string tramMatchRulesUrl = "https://raw.githubusercontent.com/domints/mpk-ttss-mapping/master/lib/TramTypes.php";
 
         private const string busTTSSVehicleList = "http://ttss.mpk.krakow.pl/internetservice/geoserviceDispatcher/services/vehicleinfo/vehicles";
         private const string tramTTSSVehicleList = "http://www.ttss.krakow.pl/internetservice/geoserviceDispatcher/services/vehicleinfo/vehicles?positionType=CORRECTED";
@@ -36,17 +42,22 @@ namespace GtfsProvider.Downloader.Krakow
         private Dictionary<long, List<TTSSCleanVehicle>> ttssTrips = new();
         private Dictionary<long, List<GTFSCleanVehicle>> gtfsTrips = new();
         private Dictionary<string, TTSSCleanVehicle> ttssVehicleToTrip = new();
+        private List<KokonVehicle> kokonVehicles;
+        private List<KokonVehicleCompletePositionResponseModel> kokonPositions;
+        private readonly KokonClient _kokonClient;
 
         public VehicleDbBuilder(
             IFileStorage fileStorage,
             IDataStorage storage,
             IHttpClientFactory httpClientFactory,
-            ILogger<VehicleDbBuilder> logger)
+            ILogger<VehicleDbBuilder> logger,
+            KokonClient kokonClient)
         {
             _fileStorage = fileStorage;
             _storage = storage[City.Krakow] as IKrakowStorage ?? throw new InvalidOperationException("What is wrong with your DI configuration?!");
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _kokonClient = kokonClient;
         }
 
         public async Task Build(VehicleType type,
@@ -56,8 +67,11 @@ namespace GtfsProvider.Downloader.Krakow
             if (!matchRulesFetchSuccess)
                 return;
 
-            await LoadTTSSData(type);
-            await LoadGTFSData(positionsFileName);
+            var kokonDataTask = LoadKokonData();
+            var ttssDataTask = LoadTTSSData(type);
+            var gtfsDataTask = LoadGTFSData(positionsFileName);
+            await Task.WhenAll(kokonDataTask, ttssDataTask, gtfsDataTask);
+
             var offset = FindBestOffset();
             _storage.VehicleIdOffset = offset.Value;
 
@@ -108,14 +122,13 @@ namespace GtfsProvider.Downloader.Krakow
                 if (mm.gtfs.Count == 1)
                 {
                     int bestIx = -1;
-                    decimal bestCoordDiff = decimal.MaxValue;
+                    double bestDistance = double.MaxValue;
                     for (int i = 0; i < mm.ttss.Count; i++)
                     {
-                        decimal latDiff = Math.Abs((decimal)mm.gtfs[0].Latitude - mm.ttss[i].Latitude);
-                        decimal lonDiff = Math.Abs((decimal)mm.gtfs[0].Longitude - mm.ttss[i].Longitude);
-                        if (latDiff + lonDiff < bestCoordDiff)
+                        var distance = mm.gtfs[0].Coords.DistanceTo(mm.ttss[i].Coords);
+                        if (distance < bestDistance)
                         {
-                            bestCoordDiff = latDiff + lonDiff;
+                            bestDistance = distance;
                             bestIx = i;
                         }
                     }
@@ -135,14 +148,13 @@ namespace GtfsProvider.Downloader.Krakow
                 else if (mm.ttss.Count == 1)
                 {
                     int bestIx = -1;
-                    decimal bestCoordDiff = decimal.MaxValue;
-                    for (int i = 0; i < mm.gtfs.Count; i++)
+                    double bestDistance = double.MaxValue;
+                    for (int i = 0; i < mm.ttss.Count; i++)
                     {
-                        decimal latDiff = Math.Abs(mm.ttss[0].Latitude - (decimal)mm.gtfs[i].Latitude);
-                        decimal lonDiff = Math.Abs(mm.ttss[0].Longitude - (decimal)mm.gtfs[i].Longitude);
-                        if (latDiff + lonDiff < bestCoordDiff)
+                        var distance = mm.gtfs[0].Coords.DistanceTo(mm.ttss[i].Coords);
+                        if (distance < bestDistance)
                         {
-                            bestCoordDiff = latDiff + lonDiff;
+                            bestDistance = distance;
                             bestIx = i;
                         }
                     }
@@ -165,23 +177,56 @@ namespace GtfsProvider.Downloader.Krakow
                 }
             }
 
-            List<TTSSCleanVehicle> fookedTTSS = new();
+
+
+            List<TTSSCleanVehicle> vehiclesLeftForKokonMatch = new();
+            var theoreticalFirstTtssId = matchedSingle
+                .OrderBy(v => v.GtfsId)
+                .Select(v => v.TtssId - (v.GtfsId * 2) - 2)
+                .First();
+
+            var oldVehicles = await _storage.GetAllVehicles();
+            foreach (var v in oldVehicles.Where(ov => ov.Model.Type == type))
+            {
+                if (!byTtssId.ContainsKey(v.TtssId) && !byGtfsId.ContainsKey(v.GtfsId))
+                {
+                    byTtssId.Add(v.TtssId, v);
+                    byGtfsId.Add(v.GtfsId, v);
+                }
+            }
+
             foreach (var t in unmatchedTtss.SelectMany(x => x))
             {
-                // TODO: Need to figure out what to do when between vehicles there is another with non-matching ID.
+                if(byTtssId.ContainsKey(t.Id))
+                    continue;
+
                 var closestUp = 0;
                 var closestDown = 0;
+                var skipUp = 0;
+                var skipDown = 0;
                 for (int i = 1; i < 10; i++)
                 {
                     var up = t.Id + (i * 2);
                     var down = t.Id - (i * 2);
                     if (closestUp == 0 && byTtssId.ContainsKey(up))
                     {
+                        if (byTtssId[up].GtfsId < theoreticalFirstTtssId)
+                        {
+                            skipUp++;
+                            continue;
+                        }
+
                         closestUp = i;
                     }
 
                     if (closestDown == 0 && byTtssId.ContainsKey(down))
                     {
+                        if (byTtssId[down].GtfsId < theoreticalFirstTtssId)
+                        {
+                            skipDown++;
+                            continue;
+                        }
+
                         closestDown = i;
                     }
 
@@ -194,32 +239,32 @@ namespace GtfsProvider.Downloader.Krakow
                 if (closestDown > 0)
                 {
                     confident += 25;
-                    possibleGtfsId = byTtssId[t.Id - (closestDown * 2)].GtfsId + closestDown;
-                    if(unmatchedGtfsDict.ContainsKey(possibleGtfsId))
+                    possibleGtfsId = byTtssId[t.Id - ((closestDown - skipDown) * 2)].GtfsId + closestDown;
+                    if (unmatchedGtfsDict.ContainsKey(possibleGtfsId))
                         confident += 25;
                 }
 
                 if (closestUp > 0)
                 {
                     confident += 25;
-                    var possibleGtfsVal = byTtssId[t.Id + (closestUp * 2)].GtfsId - closestUp;
+                    var possibleGtfsVal = byTtssId[t.Id + ((closestUp - skipUp) * 2)].GtfsId - closestUp;
                     if (possibleGtfsId == 0)
                     {
                         possibleGtfsId = possibleGtfsVal;
                     }
-                    else if(possibleGtfsId != possibleGtfsVal)
+                    else if (possibleGtfsId != possibleGtfsVal)
                     {
                         confident = 0;
                         possibleGtfsId = 0;
                     }
 
-                    if(unmatchedGtfsDict.ContainsKey(possibleGtfsId))
+                    if (unmatchedGtfsDict.ContainsKey(possibleGtfsId))
                         confident += 25;
                 }
 
                 if (possibleGtfsId > 0 && confident > 0)
                 {
-                    if(unmatchedGtfsDict.ContainsKey(possibleGtfsId))
+                    if (unmatchedGtfsDict.ContainsKey(possibleGtfsId))
                     {
                         var veh = new Vehicle
                         {
@@ -249,48 +294,62 @@ namespace GtfsProvider.Downloader.Krakow
                 }
                 else
                 {
-                    fookedTTSS.Add(t);
+                    vehiclesLeftForKokonMatch.Add(t);
                 }
             }
 
-            foreach(var v in matchedSingle)
+            var failedToMatchCount = 0;
+            foreach (var v in vehiclesLeftForKokonMatch)
             {
-                await _storage.AddOrUpdateVehicle(v);
+                var closeVehicles = kokonPositions.Where(k => k.Coords.DistanceTo(v.Coords) < 10).ToArray();
+                if (closeVehicles.Length == 1)
+                {
+                    var kv = KokonVehicle.FromSideNo(closeVehicles[0].SideNo);
+                    if (byGtfsId.ContainsKey(kv.VehicleNo))
+                        System.Diagnostics.Debugger.Break();
+
+                    matchedSingle.Add(new Vehicle
+                    {
+                        TtssId = v.Id,
+                        GtfsId = kv.VehicleNo,
+                        SideNo = closeVehicles[0].SideNo,
+                        IsHeuristic = true,
+                        HeuristicScore = 80
+                    });
+                }
+                else
+                {
+                    failedToMatchCount++;
+                }
             }
 
-            System.Diagnostics.Debugger.Break();
-            //var map = MapVehicleIdsToGtfsIds(offset ?? 0);
-            // foreach(var veh in gtfsTrips.Values)
-            // {
-            //     var ttssTripId = veh.TripId - offset ?? 0;
-            //     var ttssTripEntry = ttssTrips.GetValueOrDefault(ttssTripId);
-            //     if(ttssTripEntry == null)
-            //         continue;
+            var added = 0;
+            var updated = 0;
+            foreach (var v in matchedSingle)
+            {
+                var ruleMatch = FindMatchRule(v.GtfsId);
+                if (ruleMatch != null && modelDict.ContainsKey(ruleMatch.ModelName))
+                    v.Model = modelDict[ruleMatch.ModelName];
 
-            //     var vehicleDto = new Vehicle
-            //     {
-            //         GtfsId = veh.Id,
-            //         TtssId = ttssTrips[ttssTripId].Id,
+                if (v.Model == null)
+                {
+                    _logger.LogWarning("Missing model information for {type} no {id}!", type, v.GtfsId);
+                }
 
-            //     };
+                var addOrUpdateResult = await _storage.AddOrUpdateVehicle(v);
+                if (addOrUpdateResult == AddUpdateResult.Updated)
+                    updated++;
+                else if (addOrUpdateResult == AddUpdateResult.Added)
+                    added++;
+            }
 
-            //     await _storage.AddOrUpdateVehicle(vehicleDto);
-            // }
+            _logger.LogInformation("Vehicle DB updated for {type}, {added} added entries, {updated} updated entries. Failed to match {failed} vehicles this time.", type, added, updated, failedToMatchCount);
         }
 
-        /*private Dictionary<long, long> MapVehicleIdsToGtfsIds(long offset)
+        private async Task LoadKokonData()
         {
-            var result = new Dictionary<long, long>();
-            foreach(var gtfsTrip in gtfsTrips)
-            {
-                var ttssTripId = gtfsTrip.Key + offset;
-                if(ttssTrips.ContainsKey(ttssTripId))
-                {
-                    result.Add(ttssTrips[ttssTripId].Id, gtfsTrip.Value.Id);
-                }
-            }
-            return result;
-        }*/
+            kokonPositions = await _kokonClient.GetCompleteVehsPos();
+        }
 
         private async Task<bool> LoadTTSSData(VehicleType type)
         {
@@ -327,8 +386,7 @@ namespace GtfsProvider.Downloader.Krakow
                     Id = long.Parse(v.Id),
                     Line = name[0].Trim(),
                     Direction = name.Length > 1 ? name[1].Trim() : string.Empty,
-                    Latitude = v.Latitude.Value / 3600000.0m,
-                    Longitude = v.Longitude.Value / 3600000.0m
+                    Coords = new(v.Latitude.Value / 3600000.0d, v.Longitude.Value / 3600000.0d)
                 };
 
                 ttssTrips.AddListItem(long.Parse(v.TripId), vehicleEntry);
@@ -352,8 +410,7 @@ namespace GtfsProvider.Downloader.Krakow
                     Id = long.Parse(m.Id),
                     Num = m.Vehicle.Vehicle.LicensePlate,
                     TripId = convertedTripId,
-                    Latitude = m.Vehicle.Position.Latitude,
-                    Longitude = m.Vehicle.Position.Longitude,
+                    Coords = new(m.Vehicle.Position.Latitude, m.Vehicle.Position.Longitude),
                     Timestamp = m.Vehicle.Timestamp
                 };
                 if (convertedTripId != -1)

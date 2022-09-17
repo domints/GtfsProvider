@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="27.2.1" />
+    <PackageReference Include="GeographicLib.NET" Version="2.0.0" />
     <PackageReference Include="GtfsRealtimeBindings" Version="0.0.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />

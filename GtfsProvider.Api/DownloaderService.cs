@@ -18,7 +18,7 @@ namespace GtfsProvider.Api
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var firstBootDone = false;
-            var timer = new PeriodicTimer(TimeSpan.FromMinutes(60));
+            var timer = new PeriodicTimer(TimeSpan.FromMinutes(15));
             while (!firstBootDone || (await timer.WaitForNextTickAsync(stoppingToken)
                 && !stoppingToken.IsCancellationRequested))
             {

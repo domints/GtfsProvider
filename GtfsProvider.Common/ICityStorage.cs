@@ -15,9 +15,15 @@ namespace GtfsProvider.Common
         Task<List<BaseStop>> FindStops(string pattern);
         Task RemoveStops(IEnumerable<string> gtfsIds);
         Task<List<string>> GetStopIdsByType(VehicleType type);
-        Task AddOrUpdateVehicle(Vehicle vehicle);
-        Task<Vehicle?> GetVehicleByGtfsId(long vehicleId);
-        Task<Vehicle?> GetVehicleByTtssId(long vehicleId);
+        /// <summary>
+        /// Adds or updates vehicle based on side no
+        /// </summary>
+        /// <param name="vehicle">vehicle to be stored in storage</param>
+        /// <returns>Value indicating: true for update, false for add</returns>
+        Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle);
+        Task<Vehicle?> GetVehicleByGtfsId(long vehicleId, VehicleType type);
+        Task<Vehicle?> GetVehicleByTtssId(long vehicleId, VehicleType type);
         Task<Vehicle?> GetVehicleBySideNo(string sideNo);
+        Task<IReadOnlyCollection<Vehicle>> GetAllVehicles();
     }
 }

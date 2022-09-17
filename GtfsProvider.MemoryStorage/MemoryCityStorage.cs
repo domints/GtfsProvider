@@ -13,8 +13,8 @@ namespace GtfsProvider.MemoryStorage
     public class MemoryCityStorage : ICityStorage
     {
         private readonly ConcurrentDictionary<string, Stop> _stops = new();
-        private readonly ConcurrentDictionary<long, Vehicle> _vehiclesByGtfs = new();
-        private readonly ConcurrentDictionary<long, Vehicle> _vehiclesByTtss = new();
+        protected readonly ConcurrentDictionary<(long id, VehicleType type), Vehicle> _vehiclesByGtfs = new();
+        private readonly ConcurrentDictionary<(long id, VehicleType type), Vehicle> _vehiclesByTtss = new();
         private readonly ConcurrentDictionary<string, Vehicle> _vehiclesBySideNo = new();
 
         public virtual City City => City.Default;
@@ -25,13 +25,13 @@ namespace GtfsProvider.MemoryStorage
                 .Where(s => s.Name.Matches(pattern))
                 .GroupBy(s => s.GroupId)
                 .Select(g => new BaseStop
-                    {
-                        GroupId = g.Key,
-                        Name = g.First().Name,
-                        Type =
+                {
+                    GroupId = g.Key,
+                    Name = g.First().Name,
+                    Type =
                             (g.Any(s => s.Type == VehicleType.Bus) ? VehicleType.Bus : VehicleType.None)
                             | (g.Any(s => s.Type == VehicleType.Tram) ? VehicleType.Tram : VehicleType.None)
-                    })
+                })
                 .ToList();
 
             return Task.FromResult(result);
@@ -46,7 +46,7 @@ namespace GtfsProvider.MemoryStorage
 
         public Task RemoveStops(IEnumerable<string> gtfsIds)
         {
-            foreach(var id in gtfsIds)
+            foreach (var id in gtfsIds)
                 _stops.TryRemove(id, out Stop _);
 
             return Task.CompletedTask;
@@ -54,40 +54,62 @@ namespace GtfsProvider.MemoryStorage
 
         public Task AddStops(IEnumerable<Stop> stops)
         {
-            foreach(var stop in stops)
+            foreach (var stop in stops)
                 _stops.AddOrUpdate(stop.GtfsId, stop, (_, _) => stop);
 
             return Task.CompletedTask;
         }
 
-        public Task AddOrUpdateVehicle(Vehicle vehicle)
+        public Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle)
         {
-            if (_vehiclesBySideNo.TryRemove(vehicle.SideNo, out Vehicle? existingVehicle))
+            var result = AddUpdateResult.Added;
+            var existingVehicle = _vehiclesBySideNo.GetValueOrDefault(vehicle.SideNo);
+            if (existingVehicle != null)
             {
-                _vehiclesByGtfs.TryRemove(existingVehicle.GtfsId, out Vehicle? _);
-                _vehiclesByTtss.TryRemove(existingVehicle.TtssId, out Vehicle? _);
+                if (existingVehicle.GtfsId == vehicle.GtfsId && existingVehicle.TtssId == vehicle.TtssId)
+                {
+                    return Task.FromResult(AddUpdateResult.Skipped);
+                }
+                else
+                {
+                    _vehiclesBySideNo.TryRemove(vehicle.SideNo, out Vehicle? _);
+                    _vehiclesByGtfs.TryRemove((existingVehicle.GtfsId, vehicle.Model.Type), out Vehicle? _);
+                    _vehiclesByTtss.TryRemove((existingVehicle.TtssId, vehicle.Model.Type), out Vehicle? _);
+                    result = AddUpdateResult.Updated;
+                }
             }
 
-            _vehiclesByGtfs.AddOrUpdate(vehicle.GtfsId, vehicle, (_, _) => vehicle);
-            _vehiclesByTtss.AddOrUpdate(vehicle.TtssId, vehicle, (_, _) => vehicle);
+            if (_vehiclesByTtss.TryRemove((vehicle.TtssId, vehicle.Model.Type), out Vehicle? existingttss))
+            {
+                _vehiclesBySideNo.TryRemove(existingttss.SideNo, out Vehicle? _);
+                _vehiclesByGtfs.TryRemove((existingttss.GtfsId, vehicle.Model.Type), out Vehicle? _);
+            }
+
+            _vehiclesByGtfs.AddOrUpdate((vehicle.GtfsId, vehicle.Model.Type), vehicle, (_, _) => vehicle);
+            _vehiclesByTtss.AddOrUpdate((vehicle.TtssId, vehicle.Model.Type), vehicle, (_, _) => vehicle);
             _vehiclesBySideNo.AddOrUpdate(vehicle.SideNo, vehicle, (_, _) => vehicle);
 
-            return Task.CompletedTask;
+            return Task.FromResult(result);
         }
 
-        public Task<Vehicle?> GetVehicleByGtfsId(long vehicleId)
+        public Task<Vehicle?> GetVehicleByGtfsId(long vehicleId, VehicleType type)
         {
-            return Task.FromResult(_vehiclesByGtfs.GetValueOrDefault(vehicleId));
+            return Task.FromResult(_vehiclesByGtfs.GetValueOrDefault((vehicleId, type)));
         }
 
-        public virtual Task<Vehicle?> GetVehicleByTtssId(long vehicleId)
+        public virtual Task<Vehicle?> GetVehicleByTtssId(long vehicleId, VehicleType type)
         {
-            return GetVehicleByGtfsId(vehicleId);
+            return Task.FromResult(_vehiclesByTtss.GetValueOrDefault((vehicleId, type)));
         }
 
         public Task<Vehicle?> GetVehicleBySideNo(string sideNo)
         {
             return Task.FromResult(_vehiclesBySideNo.GetValueOrDefault(sideNo));
+        }
+
+        public Task<IReadOnlyCollection<Vehicle>> GetAllVehicles()
+        {
+            return Task.FromResult(_vehiclesByGtfs.Values.AsReadOnly());
         }
     }
 }

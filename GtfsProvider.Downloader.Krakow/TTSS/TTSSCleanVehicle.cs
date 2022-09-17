@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using GtfsProvider.Common.Models;
 
 namespace GtfsProvider.Downloader.Krakow.TTSS
 {
@@ -10,7 +11,6 @@ namespace GtfsProvider.Downloader.Krakow.TTSS
         public long Id { get; set; }
         public string Line { get; set; }
         public string Direction { get; set; }
-        public decimal Latitude { get; set; }
-        public decimal Longitude { get; set; }
+        public Coords Coords { get; set; }
     }
 }

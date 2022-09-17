@@ -352,3 +352,5 @@ MigrationBackup/
 FileStorage/
 
 mpk-ttss-mapping/
+
+.DS_Store

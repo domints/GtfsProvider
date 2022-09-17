@@ -14,6 +14,7 @@ namespace GtfsProvider.Api
             services.AddHttpClient();
             services.AddScoped<IFileStorage, LocalFileStorage>();
             services.AddScoped<IStopService, StopService>();
+            services.AddScoped<IVehicleService, VehicleService>();
             services.AddSingleton<ICityStorageFactory, CityStorageFactory>();
 
             return services;
