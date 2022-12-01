@@ -45,11 +45,13 @@ namespace GtfsProvider.Downloader.Krakow
         private List<KokonVehicle> kokonVehicles;
         private List<KokonVehicleCompletePositionResponseModel> kokonPositions;
         private readonly KokonClient _kokonClient;
+        private readonly ITTSSClient _tttssClient;
 
         public VehicleDbBuilder(
             IFileStorage fileStorage,
             IDataStorage storage,
             IHttpClientFactory httpClientFactory,
+            ITTSSClient tttssClient,
             ILogger<VehicleDbBuilder> logger,
             KokonClient kokonClient)
         {
@@ -58,6 +60,7 @@ namespace GtfsProvider.Downloader.Krakow
             _httpClientFactory = httpClientFactory;
             _logger = logger;
             _kokonClient = kokonClient;
+            _tttssClient = tttssClient;
         }
 
         public async Task Build(VehicleType type,
@@ -354,24 +357,10 @@ namespace GtfsProvider.Downloader.Krakow
 
         private async Task<bool> LoadTTSSData(VehicleType type)
         {
-            var client = _httpClientFactory.CreateClient($"Downloader_Krakow_TTSS");
-            var jsonData = string.Empty;
-            try
-            {
-                if (type == VehicleType.Tram)
-                    jsonData = await client.GetStringAsync(tramTTSSVehicleList);
-                if (type == VehicleType.Bus)
-                    jsonData = await client.GetStringAsync(busTTSSVehicleList);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to download TTSS data for type {VehicleType}", type);
-            }
-
-            if (string.IsNullOrEmpty(jsonData))
+            var vehiclesInfo = await _tttssClient.GetVehiclesInfo(type);
+            if (vehiclesInfo == null)
                 return false;
 
-            var vehiclesInfo = JsonConvert.DeserializeObject<TTSSVehiclesInfo>(jsonData);
             TTSSRefreshTime = vehiclesInfo.LastUpdate;
 
             foreach (var v in vehiclesInfo.Vehicles)
@@ -379,7 +368,9 @@ namespace GtfsProvider.Downloader.Krakow
                 if (v.IsDeleted || string.IsNullOrWhiteSpace(v.TripId)
                     || string.IsNullOrWhiteSpace(v.Name)
                     || !v.Latitude.HasValue || !v.Longitude.HasValue)
+                {
                     continue;
+                }
 
                 var name = v.Name.Split(' ');
                 var vehicleEntry = new TTSSCleanVehicle
@@ -387,7 +378,7 @@ namespace GtfsProvider.Downloader.Krakow
                     Id = long.Parse(v.Id),
                     Line = name[0].Trim(),
                     Direction = name.Length > 1 ? name[1].Trim() : string.Empty,
-                    Coords = new(v.Latitude.Value / 3600000.0d, v.Longitude.Value / 3600000.0d)
+                    Coords = CoordsFactory.FromTTSS(v.Latitude.Value, v.Longitude.Value)
                 };
 
                 ttssTrips.AddListItem(long.Parse(v.TripId), vehicleEntry);

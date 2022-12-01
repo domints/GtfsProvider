@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Common;
 using GtfsProvider.Downloader.Krakow.Kokon;
+using GtfsProvider.Downloader.Krakow.TTSS;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GtfsProvider.Downloader.Krakow.Extensions
@@ -13,6 +14,7 @@ namespace GtfsProvider.Downloader.Krakow.Extensions
         public static IServiceCollection RegisterKrakowDownloader(this IServiceCollection services)
         {
             services.AddScoped<IDownloader, Downloader>();
+            services.AddScoped<ITTSSClient, TTSSClient>();
             services.AddTransient<VehicleDbBuilder>();
             services.AddTransient<KokonClient>();
             return services;

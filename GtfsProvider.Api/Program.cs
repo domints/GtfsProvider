@@ -46,6 +46,13 @@ app.MapGet("/vehicles", (IVehicleService vehicleService, CaseInsensitiveBind<Cit
     return vehicleService.GetAll(resolvedCity);
 });
 
+app.MapGet("/vehicles/withLiveInfo", (IVehicleService vehicleService, CaseInsensitiveBind<City>? city) =>
+{
+    var resolvedCity = city ?? City.Krakow;
+
+    return vehicleService.GetAllWLiveInfo(resolvedCity);
+});
+
 app.MapGet("/vehicles/manyByTtss", (IVehicleService vehicleService, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> type, CommaSeparated<long> ids) =>
 {
     var resolvedCity = city ?? City.Krakow;

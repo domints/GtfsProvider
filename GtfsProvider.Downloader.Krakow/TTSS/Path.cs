@@ -12,7 +12,7 @@ namespace GtfsProvider.Downloader.Krakow.TTSS
         public int Y1 { get; set; }
 
         [JsonProperty("length")]
-        public double Length { get; set; }
+        public decimal Length { get; set; }
 
         [JsonProperty("x1")]
         public int X1 { get; set; }

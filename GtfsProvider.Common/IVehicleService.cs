@@ -12,5 +12,6 @@ namespace GtfsProvider.Common
         Task<Vehicle?> GetByTtssId(City city, VehicleType type, long id);
         Task<IReadOnlyCollection<Vehicle>> GetByTtssId(City city, VehicleType type, List<long> ids);
         Task<IReadOnlyCollection<Vehicle>> GetAll(City city);
+        Task<IReadOnlyCollection<VehicleWLiveInfo>> GetAllWLiveInfo(City city);
     }
 }

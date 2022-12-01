@@ -11,9 +11,12 @@ namespace GtfsProvider.Services
     public class VehicleService : IVehicleService
     {
         private readonly IDataStorage _dataStorage;
-        public VehicleService(IDataStorage dataStorage)
+        private readonly ILiveDataService _liveDataService;
+
+        public VehicleService(IDataStorage dataStorage, ILiveDataService liveDataService)
         {
             _dataStorage = dataStorage;
+            _liveDataService = liveDataService;
         }
 
         public Task<IReadOnlyCollection<Vehicle>> GetAll(City city)
@@ -21,6 +24,25 @@ namespace GtfsProvider.Services
             var store = _dataStorage[city];
 
             return store.GetAllVehicles();
+        }
+
+        public async Task<IReadOnlyCollection<VehicleWLiveInfo>> GetAllWLiveInfo(City city)
+        {
+            var store = _dataStorage[city];
+
+            var vehicles = await store.GetAllVehicles();
+            var liveInfo = (await _liveDataService.GetAllPositions(city)).ToDictionary(i => i.VehicleId);
+
+            return vehicles.Select(v => new VehicleWLiveInfo
+            {
+                TtssId = v.TtssId,
+                GtfsId = v.GtfsId,
+                SideNo = v.SideNo,
+                Model = v.Model,
+                IsHeuristic = v.IsHeuristic,
+                HeuristicScore = v.HeuristicScore,
+                LiveInfo = liveInfo.GetValueOrDefault(v.TtssId)
+            }).ToList();
         }
 
         public Task<Vehicle?> GetByTtssId(City city, VehicleType type, long id)
