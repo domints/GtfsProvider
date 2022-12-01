@@ -334,6 +334,7 @@ namespace GtfsProvider.Downloader.Krakow
                 if (v.Model == null)
                 {
                     _logger.LogWarning("Missing model information for {type} no {id}!", type, v.GtfsId);
+                    v.Model = new VehicleModel { Type = type };
                 }
 
                 var addOrUpdateResult = await _storage.AddOrUpdateVehicle(v);
