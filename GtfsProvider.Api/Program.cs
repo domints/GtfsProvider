@@ -8,9 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAppServices();
 builder.Services.AddHostedService<DownloaderService>();
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins("localhost", "localhost:8300", "kklive.pl", "ttss.dszymanski.pl")));
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
+app.UseCors();
 
 app.Use(async (HttpContext cx, Func<Task> next) =>
 {
