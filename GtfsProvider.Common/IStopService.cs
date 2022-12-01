@@ -9,6 +9,7 @@ namespace GtfsProvider.Common
 {
     public interface IStopService
     {
-        Task<List<BaseStop>> Autocomplete(City city, string query);
+        Task<List<BaseStop>> Autocomplete(City city, string query, int? limit);
+        Task<List<Stop>> AllStops(City city);
     }
 }

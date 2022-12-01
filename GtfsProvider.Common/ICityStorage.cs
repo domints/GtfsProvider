@@ -12,7 +12,7 @@ namespace GtfsProvider.Common
         City City { get; }
         Task AddStops(IEnumerable<Stop> stops);
         Task<List<Stop>> GetAllStops();
-        Task<List<BaseStop>> FindStops(string pattern);
+        Task<List<BaseStop>> FindStops(string pattern, int? limit);
         Task RemoveStops(IEnumerable<string> gtfsIds);
         Task<List<string>> GetStopIdsByType(VehicleType type);
         /// <summary>

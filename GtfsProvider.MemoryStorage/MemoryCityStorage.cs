@@ -19,12 +19,14 @@ namespace GtfsProvider.MemoryStorage
 
         public virtual City City => City.Default;
 
-        public Task<List<BaseStop>> FindStops(string pattern)
+        public Task<List<BaseStop>> FindStops(string pattern, int? limit)
         {
-            var result = _stops.Values
+            var query = _stops.Values
                 .Where(s => s.Name.Matches(pattern))
-                .GroupBy(s => s.GroupId)
-                .Select(g => new BaseStop
+                .GroupBy(s => s.GroupId);
+            if (limit.HasValue)
+                query = query.Take(limit.Value);
+            var result = query.Select(g => new BaseStop
                 {
                     GroupId = g.Key,
                     Name = g.First().Name,

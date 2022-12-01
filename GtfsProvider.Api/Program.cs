@@ -8,13 +8,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAppServices();
 builder.Services.AddHostedService<DownloaderService>();
-builder.Services.AddCors(options =>
-    options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("localhost", "localhost:8300", "kklive.pl", "ttss.dszymanski.pl")));
+builder.Services.AddCors();
 
 var app = builder.Build();
 // Configure the HTTP request pipeline.
-app.UseCors();
+app.UseCors(builder =>
+    builder
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithOrigins("http://localhost", "http://localhost:8300", "https://kklive.pl", "https://ttss.dszymanski.pl"));
 
 app.Use(async (HttpContext cx, Func<Task> next) =>
 {
@@ -40,7 +42,14 @@ app.MapGet("/autocomplete", (IStopService stopService, CaseInsensitiveBind<City>
     var resolvedCity = city ?? City.Krakow;
     var itemLimit = maxItems ?? 10;
 
-    return stopService.Autocomplete(resolvedCity, query);
+    return stopService.Autocomplete(resolvedCity, query, itemLimit);
+});
+
+app.MapGet("/stops", (IStopService stopService, CaseInsensitiveBind<City>? city) =>
+{
+    var resolvedCity = city ?? City.Krakow;
+
+    return stopService.AllStops(resolvedCity);
 });
 
 app.MapGet("/vehicles", (IVehicleService vehicleService, CaseInsensitiveBind<City>? city) =>
