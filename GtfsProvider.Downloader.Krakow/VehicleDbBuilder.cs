@@ -338,7 +338,7 @@ namespace GtfsProvider.Downloader.Krakow
 
                 if (v.Model == null)
                 {
-                    _logger.LogWarning("Missing model information for {type} no {id}!", type, v.GtfsId);
+                    _logger.LogWarning("Missing model information for {type} no {id}! Heuristic: {heuristic} w score {score}", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
                     v.Model = new VehicleModel { Type = type };
                 }
 
