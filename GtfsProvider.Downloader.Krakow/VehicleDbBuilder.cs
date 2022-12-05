@@ -63,12 +63,12 @@ namespace GtfsProvider.Downloader.Krakow
             _tttssClient = tttssClient;
         }
 
-        public async Task Build(VehicleType type,
+        public async Task<bool> Build(VehicleType type,
             string positionsFileName)
         {
             var matchRulesFetchSuccess = await BuildMatchRules(type);
             if (!matchRulesFetchSuccess)
-                return;
+                return false;
 
             var kokonDataTask = LoadKokonData();
             var ttssDataTask = LoadTTSSData(type);
@@ -76,6 +76,9 @@ namespace GtfsProvider.Downloader.Krakow
             await Task.WhenAll(kokonDataTask, ttssDataTask, gtfsDataTask);
 
             var offset = FindBestOffset();
+            if (!offset.HasValue)
+                return false;
+
             _storage.VehicleIdOffset = offset.Value;
 
             List<Vehicle> matchedSingle = new();
@@ -178,9 +181,8 @@ namespace GtfsProvider.Downloader.Krakow
                 {
                     System.Diagnostics.Debugger.Break();
                 }
+
             }
-
-
 
             List<TTSSCleanVehicle> vehiclesLeftForKokonMatch = new();
             var theoreticalFirstTtssId = matchedSingle
@@ -348,6 +350,7 @@ namespace GtfsProvider.Downloader.Krakow
             }
 
             _logger.LogInformation("Vehicle DB updated for {type}, {added} added entries, {updated} updated entries. Failed to match {failed} vehicles this time.", type, added, updated, failedToMatchCount);
+            return true;
         }
 
         private async Task LoadKokonData()
@@ -453,7 +456,10 @@ namespace GtfsProvider.Downloader.Krakow
             }
 
             if (options != 1)
-                throw new Exception($"Found {options} matching offsets.");
+            {
+                _logger.LogError("Found {options} matching offsets. Cancelling current refresh cycle.", options);
+                return null;
+            }
 
             return bestOffset;
         }
