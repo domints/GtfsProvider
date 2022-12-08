@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Common.Models;
 
-namespace GtfsProvider.Downloader.Krakow.TTSS
+namespace GtfsProvider.CityClient.Krakow.TTSS
 {
     public static class CoordsFactory
     {

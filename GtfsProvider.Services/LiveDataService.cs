@@ -10,19 +10,28 @@ namespace GtfsProvider.Services
 {
     public class LiveDataService : ILiveDataService
     {
-        private readonly IEnumerable<IDownloader> _downloaders;
-        public LiveDataService(IEnumerable<IDownloader> downloaders)
+        private readonly IEnumerable<ICityLiveDataProvider> _liveDataProviders;
+        public LiveDataService(IEnumerable<ICityLiveDataProvider> liveDataProviders)
         {
-            _downloaders = downloaders;
+            _liveDataProviders = liveDataProviders;
         }
 
         public async Task<List<VehicleLiveInfo>> GetAllPositions(City city)
         {
-            var downloader = _downloaders.FirstOrDefault(d => d.City == city);
-            if (downloader == null)
+            var provider = _liveDataProviders.FirstOrDefault(d => d.City == city);
+            if (provider == null)
                 return new();
 
-            return await downloader.GetLivePositions();
+            return await provider.GetLivePositions();
+        }
+
+        public async Task<List<StopDeparture>> GetStopDepartures(City city, string groupId, DateTime? startTime, int? timeFrame)
+        {
+            var provider = _liveDataProviders.FirstOrDefault(d => d.City == city);
+            if (provider == null)
+                return new();
+
+            return await provider.GetStopDepartures(groupId, startTime, timeFrame);
         }
     }
 }

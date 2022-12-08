@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Common.Models.Gtfs;
 
-namespace GtfsProvider.Downloader.Krakow.Extensions
+namespace GtfsProvider.CityClient.Krakow.Extensions
 {
     public static class StopEntryExtensions
     {

@@ -4,13 +4,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Common.Models;
 
-namespace GtfsProvider.Downloader.Krakow.TTSS
+namespace GtfsProvider.CityClient.Krakow.TTSS
 {
-    public class TTSSCleanVehicle
+    public class GTFSCleanVehicle
     {
         public long Id { get; set; }
-        public string Line { get; set; }
-        public string Direction { get; set; }
+        public string Num { get; set; }
+        public long TripId { get; set; }
         public Coords Coords { get; set; }
+        public ulong Timestamp { get; set; }
     }
 }

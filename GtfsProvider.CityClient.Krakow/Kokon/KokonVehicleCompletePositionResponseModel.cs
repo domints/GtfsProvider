@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using GtfsProvider.Common.Models;
 
-namespace GtfsProvider.Downloader.Krakow.Kokon
+namespace GtfsProvider.CityClient.Krakow.Kokon
 {
     public class KokonVehicleCompletePositionResponseModel
     {

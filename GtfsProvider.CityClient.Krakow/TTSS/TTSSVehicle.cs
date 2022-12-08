@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace GtfsProvider.Downloader.Krakow.TTSS
+namespace GtfsProvider.CityClient.Krakow.TTSS
 {
     public class TTSSVehicle
     {

@@ -7,14 +7,14 @@ using GtfsProvider.Common.CityStorages;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
-using GtfsProvider.Downloader.Krakow.Kokon;
-using GtfsProvider.Downloader.Krakow.TTSS;
+using GtfsProvider.CityClient.Krakow.Kokon;
+using GtfsProvider.CityClient.Krakow.TTSS;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using ProtoBuf;
 using TransitRealtime;
 
-namespace GtfsProvider.Downloader.Krakow
+namespace GtfsProvider.CityClient.Krakow
 {
     public class VehicleDbBuilder
     {
@@ -45,13 +45,13 @@ namespace GtfsProvider.Downloader.Krakow
         private List<KokonVehicle> kokonVehicles;
         private List<KokonVehicleCompletePositionResponseModel> kokonPositions;
         private readonly KokonClient _kokonClient;
-        private readonly ITTSSClient _tttssClient;
+        private readonly IKrakowTTSSClient _tttssClient;
 
         public VehicleDbBuilder(
             IFileStorage fileStorage,
             IDataStorage storage,
             IHttpClientFactory httpClientFactory,
-            ITTSSClient tttssClient,
+            IKrakowTTSSClient tttssClient,
             ILogger<VehicleDbBuilder> logger,
             KokonClient kokonClient)
         {

@@ -7,9 +7,10 @@ using GtfsProvider.Common.Models;
 
 namespace GtfsProvider.Common
 {
-    public interface IDownloader
+    public interface ICityLiveDataProvider
     {
         City City { get; }
-        Task RefreshIfNeeded();
+        Task<List<VehicleLiveInfo>> GetLivePositions();
+        Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame);
     }
 }

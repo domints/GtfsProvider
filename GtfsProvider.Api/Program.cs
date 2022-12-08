@@ -52,6 +52,13 @@ app.MapGet("/stops", (IStopService stopService, CaseInsensitiveBind<City>? city)
     return stopService.AllStops(resolvedCity);
 });
 
+app.MapGet("/departures/stop/{groupId}", (ILiveDataService liveDataService, string groupId, CaseInsensitiveBind<City>? city, DateTime? startTime, int? timeFrame) =>
+{
+    var resolvedCity = city ?? City.Krakow;
+
+    return liveDataService.GetStopDepartures(resolvedCity, groupId, startTime, timeFrame);
+});
+
 app.MapGet("/vehicles", (IVehicleService vehicleService, CaseInsensitiveBind<City>? city) =>
 {
     var resolvedCity = city ?? City.Krakow;

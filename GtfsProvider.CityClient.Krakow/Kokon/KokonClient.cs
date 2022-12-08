@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace GtfsProvider.Downloader.Krakow.Kokon
+namespace GtfsProvider.CityClient.Krakow.Kokon
 {
     public class KokonClient
     {

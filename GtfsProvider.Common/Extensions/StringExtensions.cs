@@ -160,5 +160,10 @@ namespace GtfsProvider.Common.Extensions
             }
             return text;
         }
+
+        public static TimeSpan ToTimeSpan(this string? value)
+        {
+            return value != null ? TimeSpan.ParseExact(value, "g", CultureInfo.InvariantCulture) : new TimeSpan();
+        }
     }
 }

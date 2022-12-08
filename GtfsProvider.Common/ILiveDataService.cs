@@ -10,5 +10,6 @@ namespace GtfsProvider.Common
     public interface ILiveDataService
     {
         Task<List<VehicleLiveInfo>> GetAllPositions(City city);
+        Task<List<StopDeparture>> GetStopDepartures(City city, string groupId, DateTime? startTime, int? timeFrame);
     }
 }

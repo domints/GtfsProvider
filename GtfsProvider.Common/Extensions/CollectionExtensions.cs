@@ -62,6 +62,11 @@ namespace GtfsProvider.Common.Extensions
             }
         }
 
+        public static IEnumerable<TValue> ConcatWithNull<TValue>(this IEnumerable<TValue> first, IEnumerable<TValue>? second)
+        {
+            return first.Concat(second ?? Enumerable.Empty<TValue>());
+        }
+
         public static IReadOnlyCollection<T> AsReadOnly<T>(this ICollection<T> source)
         {
             if (source == null) throw new ArgumentNullException("source");

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Common.Enums;
 
-namespace GtfsProvider.Downloader.Krakow.Kokon
+namespace GtfsProvider.CityClient.Krakow.Kokon
 {
     public class KokonVehicle
     {

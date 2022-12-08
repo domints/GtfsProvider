@@ -1,6 +1,6 @@
 using GtfsProvider.Common;
 using GtfsProvider.Common.Utils;
-using GtfsProvider.Downloader.Krakow.Extensions;
+using GtfsProvider.CityClient.Krakow.Extensions;
 using GtfsProvider.MemoryStorage;
 using GtfsProvider.Services;
 

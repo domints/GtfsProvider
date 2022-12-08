@@ -11,12 +11,12 @@ using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
 using GtfsProvider.Common.Models.Gtfs;
-using GtfsProvider.Downloader.Krakow.Extensions;
-using GtfsProvider.Downloader.Krakow.TTSS;
+using GtfsProvider.CityClient.Krakow.Extensions;
+using GtfsProvider.CityClient.Krakow.TTSS;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.Extensions.Logging;
 
-namespace GtfsProvider.Downloader.Krakow
+namespace GtfsProvider.CityClient.Krakow
 {
     public class Downloader : IDownloader
     {
@@ -33,7 +33,6 @@ namespace GtfsProvider.Downloader.Krakow
         private readonly VehicleDbBuilder _busVehicleDbBuilder;
         private readonly Regex _fileRegex = new("<a href=\"([A-z\\.]+)\">([A-z\\.]+)<\\/a>\\s+([0-9]{2}-[A-z]{3}-[0-9]{4}\\s[0-9]{2}:[0-9]{2})", RegexOptions.Compiled | RegexOptions.Multiline);
         private readonly ILogger<Downloader> _logger;
-        private readonly ITTSSClient _ttssClient;
 
         public Downloader(
             IFileStorage fileStorage,
@@ -41,7 +40,6 @@ namespace GtfsProvider.Downloader.Krakow
             IHttpClientFactory httpClientFactory,
             VehicleDbBuilder tramVehicleDbBuilder,
             VehicleDbBuilder busVehicleDbBuilder,
-            ITTSSClient ttssClient,
             ILogger<Downloader> logger)
         {
             _fileStorage = fileStorage;
@@ -50,7 +48,6 @@ namespace GtfsProvider.Downloader.Krakow
             _tramVehicleDbBuilder = tramVehicleDbBuilder;
             _busVehicleDbBuilder = busVehicleDbBuilder;
             _logger = logger;
-            this._ttssClient = ttssClient;
         }
 
         public async Task RefreshIfNeeded()
@@ -115,37 +112,6 @@ namespace GtfsProvider.Downloader.Krakow
                 await _dataStorage.RemoveStops(toRemove);
                 await _dataStorage.AddStops(toAdd);
             }
-        }
-
-        public async Task<List<VehicleLiveInfo>> GetLivePositions()
-        {
-            var busInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Bus);
-            var tramInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Tram);
-            return (busInfo?.Vehicles ?? new List<TTSSVehicle>())
-                .Concat(tramInfo?.Vehicles ?? new List<TTSSVehicle>())
-                .Where(i => !i.IsDeleted)
-                .Select(i =>
-            new VehicleLiveInfo
-            {
-                VehicleId = long.Parse(i.Id),
-                TripId = long.Parse(i.TripId),
-                Name = i.Name,
-                Coords = CoordsFactory.FromTTSS(i.Latitude, i.Longitude),
-                Heading = i.Heading,
-                Type = i.Category switch
-                {
-                    "tram" => VehicleType.Tram,
-                    "bus" => VehicleType.Bus,
-                    _ => VehicleType.None
-                },
-                Path = i.Path != null ? i.Path.Select(p => new PathEntry
-                {
-                    PointA = CoordsFactory.FromTTSS(p.X1, p.Y1),
-                    PointB = CoordsFactory.FromTTSS(p.X2, p.Y2),
-                    Length = p.Length,
-                    Angle = p.Angle
-                }).ToList() : new()
-            }).ToList();
         }
     }
 }

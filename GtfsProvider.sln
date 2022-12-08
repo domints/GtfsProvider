@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.Api", "GtfsPro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.Common", "GtfsProvider.Common\GtfsProvider.Common.csproj", "{04E967FF-1EA4-4B8E-89EF-32C26ADB3DE6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.Downloader.Krakow", "GtfsProvider.Downloader.Krakow\GtfsProvider.Downloader.Krakow.csproj", "{9D62F66A-8D9F-48FE-8E6D-1A891792719F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.CityClient.Krakow", "GtfsProvider.CityClient.Krakow\GtfsProvider.CityClient.Krakow.csproj", "{9D62F66A-8D9F-48FE-8E6D-1A891792719F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.Services", "GtfsProvider.Services\GtfsProvider.Services.csproj", "{4E898544-7FAA-46BF-AEC6-BCED2F25BA0A}"
 EndProject
