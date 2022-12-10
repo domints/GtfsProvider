@@ -106,7 +106,7 @@ namespace GtfsProvider.CityClient.Krakow
         {
             return new TripDepartureListItem
             {
-                TimeString = passage.ActualTime,
+                TimeString = passage.ActualTime ?? "--:--",
                 StopId = passage.Stop.ShortId,
                 StopName = passage.Stop.Name,
                 SeqNumber = passage.SequenceNo,
