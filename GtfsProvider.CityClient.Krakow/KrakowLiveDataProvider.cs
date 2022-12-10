@@ -53,6 +53,24 @@ namespace GtfsProvider.CityClient.Krakow
             return result.OrderByDescending(d => d.IsOld).ThenBy(d => d.RelativeTime).ToList();
         }
 
+        public async Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType)
+        {
+            var departures = await _ttssClient.GetTripInfo(vehicleType, tripId);
+            if (departures == null)
+                return new TripDepartures();
+            return new TripDepartures
+            {
+                Line = departures.RouteName,
+                Direction = departures.DirectionText,
+                ListItems = (departures.OldPassages ?? Enumerable.Empty<TripPassage>())
+                    .Select(p => MapTTSSTripDepartureToCommon(p, true))
+                    .Concat((departures.ActualPassages ?? Enumerable.Empty<TripPassage>())
+                        .Select(p => MapTTSSTripDepartureToCommon(p, false)))
+                    .OrderBy(p => p.SeqNumber)
+                    .ToList()
+            };
+        }
+
         public async Task<List<VehicleLiveInfo>> GetLivePositions()
         {
             var busInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Bus);
@@ -82,6 +100,19 @@ namespace GtfsProvider.CityClient.Krakow
                     Angle = p.Angle
                 }).ToList() : new()
             }).ToList();
+        }
+
+        private TripDepartureListItem MapTTSSTripDepartureToCommon(TripPassage passage, bool isOld)
+        {
+            return new TripDepartureListItem
+            {
+                TimeString = passage.ActualTime,
+                StopId = passage.Stop.ShortId,
+                StopName = passage.Stop.Name,
+                SeqNumber = passage.SequenceNo,
+                IsOld = isOld,
+                IsStopping = PassageStatusConverter.Convert(passage.StatusString) == PassageStatus.Stopping
+            };
         }
 
         private async Task<StopDeparture> MapTTSSStopDepartureToCommon(StopPassage passage, bool isOld)

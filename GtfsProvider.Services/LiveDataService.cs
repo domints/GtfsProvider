@@ -33,5 +33,14 @@ namespace GtfsProvider.Services
 
             return await provider.GetStopDepartures(groupId, startTime, timeFrame);
         }
+
+        public async Task<TripDepartures> GetTripDepartures(City city, string tripId, VehicleType vehicleType)
+        {
+            var provider = _liveDataProviders.FirstOrDefault(d => d.City == city);
+            if (provider == null)
+                return new();
+
+            return await provider.GetTripDepartures(tripId, vehicleType);
+        }
     }
 }

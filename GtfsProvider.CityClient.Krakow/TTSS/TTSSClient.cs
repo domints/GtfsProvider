@@ -15,6 +15,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
     {
         Task<TTSSVehiclesInfo?> GetVehiclesInfo(VehicleType type);
         Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame);
+        Task<TripInfo?> GetTripInfo(VehicleType type, string tripId);
     }
 
     public class KrakowTTSSClient : IKrakowTTSSClient
@@ -23,6 +24,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
         private const string tramHost = "http://www.ttss.krakow.pl/";
         private const string stopPassagesPath = "internetservice/services/passageInfo/stopPassages/stop";
         private const string stopPostPassagesPath = "internetservice/services/passageInfo/stopPassages/stopPost";
+        private const string tripPassagesPath = "internetservice/services/tripInfo/tripPassages";
         private const string vehiclesListPath = "internetservice/geoserviceDispatcher/services/vehicleinfo/vehicles?positionType=CORRECTED";
         private readonly ILogger<KrakowTTSSClient> _logger;
         private readonly IHttpClientFactory _clientFactory;
@@ -62,6 +64,26 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
                 };
 
                 return await client.PostFormToGetJson<PassageRequest, StopInfo>(stopPassagesPath, request);
+            });
+        }
+
+        public async Task<TripInfo?> GetTripInfo(VehicleType type, string tripId)
+        {
+            return await _cache.GetOrCreateSafeAsync($"Downloader_Krakow_TTSSClient_GetStopInfo_{type}_{tripId}", async cacheEntry =>
+            {
+                cacheEntry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(10);
+                var client = GetHttpClient(type);
+                if (client == null)
+                    return null;
+
+                var request = new TripPassageRequest
+                {
+                    TripId = tripId,
+                    Mode = "departure",
+                    Language = "pl"
+                };
+
+                return await client.PostFormToGetJson<TripPassageRequest, TripInfo>(tripPassagesPath, request);
             });
         }
 

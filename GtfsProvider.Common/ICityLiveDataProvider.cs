@@ -12,5 +12,6 @@ namespace GtfsProvider.Common
         City City { get; }
         Task<List<VehicleLiveInfo>> GetLivePositions();
         Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame);
+        Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType);
     }
 }

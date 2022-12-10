@@ -11,5 +11,6 @@ namespace GtfsProvider.Common
     {
         Task<List<VehicleLiveInfo>> GetAllPositions(City city);
         Task<List<StopDeparture>> GetStopDepartures(City city, string groupId, DateTime? startTime, int? timeFrame);
+        Task<TripDepartures> GetTripDepartures(City city, string tripId, VehicleType vehicleType);
     }
 }
