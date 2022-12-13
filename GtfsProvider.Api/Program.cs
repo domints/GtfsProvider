@@ -16,7 +16,7 @@ app.UseCors(builder =>
     builder
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .WithOrigins("http://localhost", "http://localhost:8300", "https://kklive.pl", "https://ttss.dszymanski.pl"));
+        .WithOrigins("http://localhost", "http://localhost:8300", "http://localhost:4200", "https://kklive.pl", "https://ttss.dszymanski.pl"));
 
 app.Use(async (HttpContext cx, Func<Task> next) =>
 {
