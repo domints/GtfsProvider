@@ -14,7 +14,7 @@ steps:
   displayName: 'dotnet publish Release'
   workingDirectory: .
 
-- script: mkdir -p Output && cp azure-publish.sh Output/azure-publish.sh && tar -czf Output/artifact.tar.gz -C GtfsProvider.Api/bin/Release/net6.0/publish .
+- script: mkdir -p Output && cp azure-publish.sh Output/azure-publish.sh && tar -czf Output/artifact.tar.gz -C GtfsProvider.Api/bin/Release/net7.0/publish .
   displayName: 'Move results to Output dir'
 
 - task: PublishBuildArtifacts@1
