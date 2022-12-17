@@ -67,7 +67,11 @@ namespace GtfsProvider.CityClient.Krakow
                     .Concat((departures.ActualPassages ?? Enumerable.Empty<TripPassage>())
                         .Select(p => MapTTSSTripDepartureToCommon(p, false)))
                     .OrderBy(p => p.SeqNumber)
-                    .ToList()
+                    .ToList(),
+            IsGPS = (departures.OldPassages ?? Enumerable.Empty<TripPassage>())
+                    .Concat(departures.ActualPassages ?? Enumerable.Empty<TripPassage>())
+                    .Select(d => PassageStatusConverter.Convert(d?.StatusString ?? ""))
+                    .Any(d => d != PassageStatus.Planned && d != PassageStatus.Unknown)
             };
         }
 

@@ -10,5 +10,6 @@ namespace GtfsProvider.Common.Models
         public string? Line { get; set; }
         public string? Direction { get; set; }
         public List<TripDepartureListItem>? ListItems { get; set; }
+        public bool IsGPS { get; set; }
     }
 }
