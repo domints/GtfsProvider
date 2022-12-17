@@ -4,6 +4,7 @@ namespace GtfsProvider.Common.Enums
     {
         Default,
         Krakow,
-        Katowice
+        Katowice,
+        Wroclaw
     }
 }

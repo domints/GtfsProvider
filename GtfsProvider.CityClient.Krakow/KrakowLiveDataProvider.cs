@@ -35,19 +35,19 @@ namespace GtfsProvider.CityClient.Krakow
 
             foreach (var departure in busDepartures?.OldPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true, VehicleType.Bus));
             }
             foreach (var departure in tramDepartures?.OldPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true, VehicleType.Tram));
             }
             foreach (var departure in busDepartures?.ActualPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false, VehicleType.Bus));
             }
             foreach (var departure in tramDepartures?.ActualPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false, VehicleType.Tram));
             }
 
             return result.OrderByDescending(d => d.IsOld).ThenBy(d => d.RelativeTime).ToList();
@@ -115,7 +115,7 @@ namespace GtfsProvider.CityClient.Krakow
             };
         }
 
-        private async Task<StopDeparture> MapTTSSStopDepartureToCommon(StopPassage passage, bool isOld)
+        private async Task<StopDeparture> MapTTSSStopDepartureToCommon(StopPassage passage, bool isOld, VehicleType type)
         {
             var vehicle = await _dataStorage.GetVehicleByTtssId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Tram)
                 ?? await _dataStorage.GetVehicleByTtssId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Bus);
@@ -131,7 +131,7 @@ namespace GtfsProvider.CityClient.Krakow
                 ModelName = vehicle?.Model?.Name,
                 SideNo = vehicle?.SideNo,
                 FloorType = vehicle?.Model?.LowFloor ?? LowFloor.Unknown,
-                VehicleType = vehicle?.Model?.Type ?? VehicleType.None,
+                VehicleType = vehicle?.Model?.Type ?? type,
                 TimeString = passage?.MixedTime?.Replace("%UNIT_MIN%", "min") ?? "-",
                 RelativeTime = passage?.ActualRelativeTime ?? 0,
                 DelayMinutes = status == PassageStatus.Planned ? (int?)null : (int)Math.Ceiling((actualTime - plannedTime).TotalMinutes),

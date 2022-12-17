@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GtfsProvider.Common\GtfsProvider.Common.csproj" />
     <ProjectReference Include="..\GtfsProvider.CityClient.Krakow\GtfsProvider.CityClient.Krakow.csproj" />
+    <ProjectReference Include="..\GtfsProvider.CityClient.Wroclaw\GtfsProvider.CityClient.Wroclaw.csproj" />
     <ProjectReference Include="..\GtfsProvider.MemoryStorage\GtfsProvider.MemoryStorage.csproj" />
     <ProjectReference Include="..\GtfsProvider.Services\GtfsProvider.Services.csproj" />
   </ItemGroup>
