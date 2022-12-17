@@ -18,6 +18,15 @@ namespace GtfsProvider.CityClient.Krakow.TTSS.Passages
         public string? ActualTime { get; set; }
 
         /// <summary>
+        /// Gets or sets the planned departure/arrival time as text (like 12:32).
+        /// </summary>
+        /// <value>
+        /// The actual time.
+        /// </value>
+        [JsonProperty("plannedTime")]
+        public string? PlannedTime { get; set; }
+
+        /// <summary>
         /// Gets or sets the status - predicted or planned.
         /// </summary>
         /// <value>

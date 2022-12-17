@@ -106,12 +106,12 @@ namespace GtfsProvider.CityClient.Krakow
         {
             return new TripDepartureListItem
             {
-                TimeString = passage.ActualTime ?? "--:--",
-                StopId = passage.Stop.ShortId,
-                StopName = passage.Stop.Name,
+                TimeString = passage.ActualTime ?? passage.PlannedTime ?? "--:--",
+                StopId = passage?.Stop?.ShortId,
+                StopName = passage?.Stop?.Name,
                 SeqNumber = passage.SequenceNo,
                 IsOld = isOld,
-                IsStopping = PassageStatusConverter.Convert(passage.StatusString) == PassageStatus.Stopping
+                IsStopping = PassageStatusConverter.Convert(passage?.StatusString ?? "PLANNED") == PassageStatus.Stopping
             };
         }
 
