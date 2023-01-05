@@ -1,7 +1,9 @@
 using GtfsProvider.Api;
 using GtfsProvider.Api.Binders;
 using GtfsProvider.Common;
+using GtfsProvider.Common.Attributes;
 using GtfsProvider.Common.Enums;
+using GtfsProvider.Common.Extensions;
 using Microsoft.AspNetCore.Http.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +37,13 @@ app.Use(async (HttpContext cx, Func<Task> next) =>
         cx.Response.StatusCode = 420;
         await cx.Response.WriteAsync("Enhance your calm. App is booting up.");
     }
+});
+
+app.MapGet("/cities", () =>
+{
+    return Enum.GetValues<City>()
+        .Where(c => c.GetAttribute<IgnoreAttribute>() == null)
+        .Select(c => new { Name = c.GetDisplayName(), Value = c.ToString().ToLowerInvariant() });
 });
 
 app.MapGet("/autocomplete", (IStopService stopService, CaseInsensitiveBind<City>? city, string query, int? maxItems) =>
