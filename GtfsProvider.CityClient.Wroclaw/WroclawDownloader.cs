@@ -45,7 +45,7 @@ namespace GtfsProvider.CityClient.Wroclaw
             {
                 stopGroups.Add(new BaseStop
                 {
-                    Name = s.Name,
+                    Name = Decapsify(s.Name),
                     GroupId = s.StopId,
                     Type = s.Type.ToStopType()
                 });
@@ -53,7 +53,7 @@ namespace GtfsProvider.CityClient.Wroclaw
                 stopPosts.AddRange(s.Posts.Select(p => new Common.Models.Stop
                 {
                     GroupId = s.StopId,
-                    Name = s.Name,
+                    Name = Decapsify(s.Name),
                     Latitude = p.Lat,
                     Longitude = p.Lon,
                     Type = p.Type.ToStopType(),
@@ -115,6 +115,14 @@ namespace GtfsProvider.CityClient.Wroclaw
 
                 await _dataStorage.AddOrUpdateVehicle(veh, oldVehicles);
             }
+        }
+
+        private string Decapsify(string input)
+        {
+            if (input.All(c => !char.IsLetter(c) || char.IsUpper(c)))
+                return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(input.ToLowerInvariant());
+
+            return input;
         }
     }
 }
