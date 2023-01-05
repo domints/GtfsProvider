@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using GtfsProvider.CityClient.Krakow.TTSS;
 using GtfsProvider.CityClient.Krakow.TTSS.Passages;
 using GtfsProvider.Common;
-using GtfsProvider.Common.CityStorages;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
@@ -16,14 +15,14 @@ namespace GtfsProvider.CityClient.Krakow
     {
         public City City => City.Krakow;
         private readonly IKrakowTTSSClient _ttssClient;
-        private readonly IKrakowStorage _dataStorage;
+        private readonly ICityStorage _dataStorage;
 
         public KrakowLiveDataProvider(
             IKrakowTTSSClient ttssClient,
             IDataStorage dataStorage)
         {
             _ttssClient = ttssClient;
-            _dataStorage = dataStorage[City] as IKrakowStorage ?? throw new InvalidOperationException("What is wrong with your DI configuration?!");
+            _dataStorage = dataStorage[City];
         }
 
         public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame)
@@ -68,7 +67,7 @@ namespace GtfsProvider.CityClient.Krakow
                         .Select(p => MapTTSSTripDepartureToCommon(p, false)))
                     .OrderBy(p => p.SeqNumber)
                     .ToList(),
-            IsGPS = (departures.OldPassages ?? Enumerable.Empty<TripPassage>())
+                IsGPS = (departures.OldPassages ?? Enumerable.Empty<TripPassage>())
                     .Concat(departures.ActualPassages ?? Enumerable.Empty<TripPassage>())
                     .Select(d => PassageStatusConverter.Convert(d?.StatusString ?? ""))
                     .Any(d => d != PassageStatus.Planned && d != PassageStatus.Unknown)
@@ -121,8 +120,8 @@ namespace GtfsProvider.CityClient.Krakow
 
         private async Task<StopDeparture> MapTTSSStopDepartureToCommon(StopPassage passage, bool isOld, VehicleType type)
         {
-            var vehicle = await _dataStorage.GetVehicleByTtssId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Tram)
-                ?? await _dataStorage.GetVehicleByTtssId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Bus);
+            var vehicle = !string.IsNullOrWhiteSpace(passage?.VehicleID) ? (await _dataStorage.GetVehicleByUniqueId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Tram)
+                ?? await _dataStorage.GetVehicleByUniqueId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Bus)) : null;
 
             var status = PassageStatusConverter.Convert(passage?.StatusString ?? "");
             var actualTime = (passage?.ActualTime).ToTimeSpan();

@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CsvHelper;
 using GtfsProvider.Common;
-using GtfsProvider.Common.CityStorages;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
@@ -27,7 +26,7 @@ namespace GtfsProvider.CityClient.Krakow
         private const string _positionsFileTram = "VehiclePositions_T.pb";
         public City City => City.Krakow;
         private readonly IFileStorage _fileStorage;
-        private readonly IKrakowStorage _dataStorage;
+        private readonly ICityStorage _dataStorage;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VehicleDbBuilder _tramVehicleDbBuilder;
         private readonly VehicleDbBuilder _busVehicleDbBuilder;
@@ -43,7 +42,7 @@ namespace GtfsProvider.CityClient.Krakow
             ILogger<Downloader> logger)
         {
             _fileStorage = fileStorage;
-            _dataStorage = dataStorage[City] as IKrakowStorage ?? throw new InvalidOperationException("What is wrong with your DI configuration?!");
+            _dataStorage = dataStorage[City];
             _httpClientFactory = httpClientFactory;
             _tramVehicleDbBuilder = tramVehicleDbBuilder;
             _busVehicleDbBuilder = busVehicleDbBuilder;
@@ -71,14 +70,35 @@ namespace GtfsProvider.CityClient.Krakow
             await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus);
             await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram);
 
+            List<BaseStop> busStops = new();
+            List<BaseStop> tramStops = new();
+
             if((await _fileStorage.GetFileTime(City, _gtfZipBus)).HasValue)
-                await ParseGtfsZip(_gtfZipBus, VehicleType.Bus);
+                busStops = await ParseGtfsZip(_gtfZipBus, VehicleType.Bus);
 
             if((await _fileStorage.GetFileTime(City, _gtfZipTram)).HasValue)
-                await ParseGtfsZip(_gtfZipTram, VehicleType.Tram);
+                tramStops = await ParseGtfsZip(_gtfZipTram, VehicleType.Tram);
+
+            var newStopGroups = busStops.Concat(tramStops).GroupBy(g => g.GroupId)
+                .Select(g => new BaseStop
+                {
+                    GroupId = g.Key,
+                    Name = g.First().Name,
+                    Type = g.Aggregate(VehicleType.None, (curr, stop) => curr | stop.Type)
+                }).ToDictionary(k => k.GroupId);
+
+            var previousStopGroups = (await _dataStorage.GetAllStopGroupIds()).ToHashSet();
+
+            var toRemove = previousStopGroups.ExceptIn(newStopGroups.Keys.ToHashSet());
+            var toAdd = newStopGroups.ExceptIn(previousStopGroups);
+
+            await _dataStorage.RemoveStopGroups(toRemove);
+            await _dataStorage.AddStopGroups(toAdd);
+
+            await _dataStorage.MarkSyncDone();
         }
 
-        private async Task ParseGtfsZip(string name, VehicleType type)
+        private async Task<List<BaseStop>> ParseGtfsZip(string name, VehicleType type)
         {
             using (ZipFile zip = new ZipFile(await _fileStorage.LoadFile(City, name)))
             {
@@ -111,6 +131,10 @@ namespace GtfsProvider.CityClient.Krakow
 
                 await _dataStorage.RemoveStops(toRemove);
                 await _dataStorage.AddStops(toAdd);
+
+                var stopGroups = stops.GroupBy(s => s.Value.GroupId)
+                    .Select(g => new BaseStop { GroupId = g.Key, Name = g.First().Value.Name, Type = type });
+                return stopGroups.ToList();
             }
         }
     }

@@ -5,7 +5,13 @@
     <ProjectReference Include="..\GtfsProvider.CityClient.Krakow\GtfsProvider.CityClient.Krakow.csproj" />
     <ProjectReference Include="..\GtfsProvider.CityClient.Wroclaw\GtfsProvider.CityClient.Wroclaw.csproj" />
     <ProjectReference Include="..\GtfsProvider.MemoryStorage\GtfsProvider.MemoryStorage.csproj" />
+    <ProjectReference Include="..\GtfsProvider.RedisStorage\GtfsProvider.RedisStorage.csproj" />
     <ProjectReference Include="..\GtfsProvider.Services\GtfsProvider.Services.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LazyCache" Version="2.4.0" />
+    <PackageReference Include="LazyCache.AspNetCore" Version="2.4.0" />
   </ItemGroup>
 
   <PropertyGroup>

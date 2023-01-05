@@ -9,6 +9,6 @@ namespace GtfsProvider.CityClient.Wroclaw.iMPK
     public abstract class BaseiMPKRequest
     {
         [Param("function")]
-        public string? Function { get; set; }
+        public abstract string Function { get; }
     }
 }

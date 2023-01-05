@@ -7,7 +7,7 @@ namespace GtfsProvider.Common.Models
 {
     public class Vehicle
     {
-        public long TtssId { get; set; }
+        public long UniqueId { get; set; }
         public long GtfsId { get; set; }
         public string SideNo { get; set; }
         public VehicleModel Model { get; set; }
@@ -16,7 +16,7 @@ namespace GtfsProvider.Common.Models
 
         public override string ToString()
         {
-            return $"{SideNo} - {GtfsId:D3} - {TtssId} - {(IsHeuristic ? "?" : "")}";
+            return $"{SideNo} - {GtfsId:D3} - {UniqueId} - {(IsHeuristic ? "?" : "")}";
         }
     }
 }

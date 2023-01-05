@@ -13,33 +13,36 @@ namespace GtfsProvider.MemoryStorage
     public class MemoryCityStorage : ICityStorage
     {
         private readonly ConcurrentDictionary<string, Stop> _stops = new();
+        private readonly ConcurrentDictionary<string, BaseStop> _stopGroups = new();
         protected readonly ConcurrentDictionary<(long id, VehicleType type), Vehicle> _vehiclesByGtfs = new();
-        private readonly ConcurrentDictionary<(long id, VehicleType type), Vehicle> _vehiclesByTtss = new();
+        private readonly ConcurrentDictionary<(long id, VehicleType type), Vehicle> _vehiclesByUniqueId = new();
         private readonly ConcurrentDictionary<string, Vehicle> _vehiclesBySideNo = new();
 
-        public virtual City City => City.Default;
+        private readonly City _city = City.Default;
+        public virtual City City => _city;
+
+        public MemoryCityStorage()
+        { }
+        
+        public MemoryCityStorage(City city)
+        {
+            _city = city;
+        }
 
         public Task<List<BaseStop>> FindStops(string pattern, int? limit)
         {
-            var query = _stops.Values
-                .Where(s => s.Name.Matches(pattern))
-                .GroupBy(s => s.GroupId);
+            var query = _stopGroups.Values
+                .Where(s => s.Name.Matches(pattern));
             if (limit.HasValue)
                 query = query.Take(limit.Value);
-            var result = query.Select(g => new BaseStop
-                {
-                    GroupId = g.Key,
-                    Name = g.First().Name,
-                    Type =
-                            (g.Any(s => s.Type == VehicleType.Bus) ? VehicleType.Bus : VehicleType.None)
-                            | (g.Any(s => s.Type == VehicleType.Tram) ? VehicleType.Tram : VehicleType.None)
-                })
-                .ToList();
+            var result = query.ToList();
 
             return Task.FromResult(result);
         }
 
         public Task<List<Stop>> GetAllStops() => Task.FromResult(_stops.Values.ToList());
+
+        public Task<List<string>> GetAllStopIds() => Task.FromResult(_stops.Values.Select(s => s.GtfsId).ToList());
 
         public Task<List<string>> GetStopIdsByType(VehicleType type)
         {
@@ -62,13 +65,29 @@ namespace GtfsProvider.MemoryStorage
             return Task.CompletedTask;
         }
 
-        public Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle)
+        public Task AddStopGroups(IEnumerable<BaseStop> stopGroups)
+        {
+            foreach (var group in stopGroups)
+                _stopGroups.AddOrUpdate(group.GroupId, group, (_, _) => group);
+
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveStopGroups(IEnumerable<string> groupIds)
+        {
+            foreach (var id in groupIds)
+                _stopGroups.TryRemove(id, out BaseStop _);
+
+            return Task.CompletedTask;
+        }
+
+        public Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle, Dictionary<string, Vehicle> existingSideNos)
         {
             var result = AddUpdateResult.Added;
             var existingVehicle = _vehiclesBySideNo.GetValueOrDefault(vehicle.SideNo);
             if (existingVehicle != null)
             {
-                if (existingVehicle.GtfsId == vehicle.GtfsId && existingVehicle.TtssId == vehicle.TtssId)
+                if (existingVehicle.GtfsId == vehicle.GtfsId && existingVehicle.UniqueId == vehicle.UniqueId)
                 {
                     return Task.FromResult(AddUpdateResult.Skipped);
                 }
@@ -76,19 +95,19 @@ namespace GtfsProvider.MemoryStorage
                 {
                     _vehiclesBySideNo.TryRemove(vehicle.SideNo, out Vehicle? _);
                     _vehiclesByGtfs.TryRemove((existingVehicle.GtfsId, vehicle.Model.Type), out Vehicle? _);
-                    _vehiclesByTtss.TryRemove((existingVehicle.TtssId, vehicle.Model.Type), out Vehicle? _);
+                    _vehiclesByUniqueId.TryRemove((existingVehicle.UniqueId, vehicle.Model.Type), out Vehicle? _);
                     result = AddUpdateResult.Updated;
                 }
             }
 
-            if (_vehiclesByTtss.TryRemove((vehicle.TtssId, vehicle.Model.Type), out Vehicle? existingttss))
+            if (_vehiclesByUniqueId.TryRemove((vehicle.UniqueId, vehicle.Model.Type), out Vehicle? existingUniqueId))
             {
-                _vehiclesBySideNo.TryRemove(existingttss.SideNo, out Vehicle? _);
-                _vehiclesByGtfs.TryRemove((existingttss.GtfsId, vehicle.Model.Type), out Vehicle? _);
+                _vehiclesBySideNo.TryRemove(existingUniqueId.SideNo, out Vehicle? _);
+                _vehiclesByGtfs.TryRemove((existingUniqueId.GtfsId, vehicle.Model.Type), out Vehicle? _);
             }
 
             _vehiclesByGtfs.AddOrUpdate((vehicle.GtfsId, vehicle.Model.Type), vehicle, (_, _) => vehicle);
-            _vehiclesByTtss.AddOrUpdate((vehicle.TtssId, vehicle.Model.Type), vehicle, (_, _) => vehicle);
+            _vehiclesByUniqueId.AddOrUpdate((vehicle.UniqueId, vehicle.Model.Type), vehicle, (_, _) => vehicle);
             _vehiclesBySideNo.AddOrUpdate(vehicle.SideNo, vehicle, (_, _) => vehicle);
 
             return Task.FromResult(result);
@@ -99,9 +118,9 @@ namespace GtfsProvider.MemoryStorage
             return Task.FromResult(_vehiclesByGtfs.GetValueOrDefault((vehicleId, type)));
         }
 
-        public virtual Task<Vehicle?> GetVehicleByTtssId(long vehicleId, VehicleType type)
+        public virtual Task<Vehicle?> GetVehicleByUniqueId(long vehicleId, VehicleType type)
         {
-            return Task.FromResult(_vehiclesByTtss.GetValueOrDefault((vehicleId, type)));
+            return Task.FromResult(_vehiclesByUniqueId.GetValueOrDefault((vehicleId, type)));
         }
 
         public Task<Vehicle?> GetVehicleBySideNo(string sideNo)
@@ -114,18 +133,33 @@ namespace GtfsProvider.MemoryStorage
             return Task.FromResult(_vehiclesByGtfs.Values.AsReadOnly());
         }
 
-        public Task<IReadOnlyCollection<Vehicle>> GetVehiclesByTtssId(List<long> vehicleIds, VehicleType type)
+        public Task<IReadOnlyCollection<Vehicle>> GetVehiclesByUniqueId(List<long> vehicleIds, VehicleType type)
         {
             var results = new List<Vehicle>();
 
             foreach(var id in vehicleIds)
             {
-                var vehicle = _vehiclesByTtss.GetValueOrDefault((id, type));
+                var vehicle = _vehiclesByUniqueId.GetValueOrDefault((id, type));
                 if(vehicle != null)
                     results.Add(vehicle);
             }
 
             return Task.FromResult((IReadOnlyCollection<Vehicle>)results);
+        }
+
+        public Task<IReadOnlyCollection<string>> GetAllStopGroupIds()
+        {
+            return Task.FromResult(_stopGroups.Keys.AsReadOnly());
+        }
+
+        public Task<Stop?> GetStopById(string stopId)
+        {
+            return Task.FromResult(_stops.GetValueOrDefault(stopId));
+        }
+
+        public Task MarkSyncDone()
+        {
+            return Task.CompletedTask;
         }
     }
 }

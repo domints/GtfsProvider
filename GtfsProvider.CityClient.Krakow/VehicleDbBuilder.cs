@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Common;
-using GtfsProvider.Common.CityStorages;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
@@ -19,7 +18,7 @@ namespace GtfsProvider.CityClient.Krakow
     public class VehicleDbBuilder
     {
         private readonly IFileStorage _fileStorage;
-        private readonly IKrakowStorage _storage;
+        private readonly ICityStorage _storage;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<VehicleDbBuilder> _logger;
 
@@ -56,7 +55,7 @@ namespace GtfsProvider.CityClient.Krakow
             KokonClient kokonClient)
         {
             _fileStorage = fileStorage;
-            _storage = storage[City.Krakow] as IKrakowStorage ?? throw new InvalidOperationException("What is wrong with your DI configuration?!");
+            _storage = storage[City.Krakow];
             _httpClientFactory = httpClientFactory;
             _logger = logger;
             _kokonClient = kokonClient;
@@ -78,8 +77,6 @@ namespace GtfsProvider.CityClient.Krakow
             var offset = FindBestOffset();
             if (!offset.HasValue)
                 return false;
-
-            _storage.VehicleIdOffset = offset.Value;
 
             List<Vehicle> matchedSingle = new();
             List<(List<GTFSCleanVehicle> gtfs, List<TTSSCleanVehicle> ttss)> matchedMultiple = new();
@@ -103,7 +100,7 @@ namespace GtfsProvider.CityClient.Krakow
 
                 Vehicle entry = new Vehicle
                 {
-                    TtssId = ttssEntry[0].Id,
+                    UniqueId = ttssEntry[0].Id,
                     GtfsId = g.Value[0].Id,
                     SideNo = g.Value[0].Num
                 };
@@ -113,14 +110,14 @@ namespace GtfsProvider.CityClient.Krakow
             {
                 if (
                     !matchedMultiple.Any(mm => mm.ttss == te.Value) &&
-                    !matchedSingle.Any(ms => te.Value.Any(t => t.Id == ms.TtssId))
+                    !matchedSingle.Any(ms => te.Value.Any(t => t.Id == ms.UniqueId))
                     )
                 {
                     unmatchedTtss.Add(te.Value);
                 }
             }
             Dictionary<long, Vehicle> byGtfsId = matchedSingle.ToDictionary(k => k.GtfsId);
-            Dictionary<long, Vehicle> byTtssId = matchedSingle.ToDictionary(k => k.TtssId);
+            Dictionary<long, Vehicle> byTtssId = matchedSingle.ToDictionary(k => k.UniqueId);
             Dictionary<long, GTFSCleanVehicle> unmatchedGtfsDict = unmatchedGtfs.SelectMany(u => u).ToDictionary(u => u.Id);
 
             foreach (var mm in matchedMultiple)
@@ -141,7 +138,7 @@ namespace GtfsProvider.CityClient.Krakow
 
                     Vehicle entry = new Vehicle
                     {
-                        TtssId = mm.ttss[bestIx].Id,
+                        UniqueId = mm.ttss[bestIx].Id,
                         GtfsId = mm.gtfs[0].Id,
                         SideNo = mm.gtfs[0].Num,
                         IsHeuristic = true,
@@ -167,7 +164,7 @@ namespace GtfsProvider.CityClient.Krakow
 
                     Vehicle entry = new Vehicle
                     {
-                        TtssId = mm.ttss[0].Id,
+                        UniqueId = mm.ttss[0].Id,
                         GtfsId = mm.gtfs[bestIx].Id,
                         SideNo = mm.gtfs[bestIx].Num,
                         IsHeuristic = true,
@@ -187,15 +184,15 @@ namespace GtfsProvider.CityClient.Krakow
             List<TTSSCleanVehicle> vehiclesLeftForKokonMatch = new();
             var theoreticalFirstTtssId = matchedSingle
                 .OrderBy(v => v.GtfsId)
-                .Select(v => v.TtssId - (v.GtfsId * 2) - 2)
+                .Select(v => v.UniqueId - (v.GtfsId * 2) - 2)
                 .First();
 
             var oldVehicles = await _storage.GetAllVehicles();
             foreach (var v in oldVehicles.Where(ov => ov.Model.Type == type))
             {
-                if (!byTtssId.ContainsKey(v.TtssId) && !byGtfsId.ContainsKey(v.GtfsId))
+                if (!byTtssId.ContainsKey(v.UniqueId) && !byGtfsId.ContainsKey(v.GtfsId))
                 {
-                    byTtssId.Add(v.TtssId, v);
+                    byTtssId.Add(v.UniqueId, v);
                     byGtfsId.Add(v.GtfsId, v);
                 }
             }
@@ -273,7 +270,7 @@ namespace GtfsProvider.CityClient.Krakow
                     {
                         var veh = new Vehicle
                         {
-                            TtssId = t.Id,
+                            UniqueId = t.Id,
                             GtfsId = possibleGtfsId,
                             SideNo = unmatchedGtfsDict[possibleGtfsId].Num,
                             IsHeuristic = true,
@@ -288,7 +285,7 @@ namespace GtfsProvider.CityClient.Krakow
                         var symbol = rule?.Symbol ?? "-";
                         var veh = new Vehicle
                         {
-                            TtssId = t.Id,
+                            UniqueId = t.Id,
                             GtfsId = possibleGtfsId,
                             SideNo = $"{symbol}{possibleGtfsId:D3}",
                             IsHeuristic = true,
@@ -315,7 +312,7 @@ namespace GtfsProvider.CityClient.Krakow
 
                     matchedSingle.Add(new Vehicle
                     {
-                        TtssId = v.Id,
+                        UniqueId = v.Id,
                         GtfsId = kv.VehicleNo,
                         SideNo = closeVehicles[0].SideNo,
                         IsHeuristic = true,
@@ -328,6 +325,7 @@ namespace GtfsProvider.CityClient.Krakow
                 }
             }
 
+            var existingSideNos = oldVehicles.ToDictionary(v => v.SideNo);
             var added = 0;
             var updated = 0;
             foreach (var v in matchedSingle)
@@ -342,7 +340,7 @@ namespace GtfsProvider.CityClient.Krakow
                     v.Model = new VehicleModel { Type = type };
                 }
 
-                var addOrUpdateResult = await _storage.AddOrUpdateVehicle(v);
+                var addOrUpdateResult = await _storage.AddOrUpdateVehicle(v, existingSideNos);
                 if (addOrUpdateResult == AddUpdateResult.Updated)
                     updated++;
                 else if (addOrUpdateResult == AddUpdateResult.Added)

@@ -11,8 +11,8 @@ namespace GtfsProvider.Common.Extensions
     {
         public static bool Matches(this string value, string query)
         {
-            var val = value.Replace('.', ' ').Replace("  ", " ").ToLowerInvariant().RemoveDiacritics();
-            var q = query.Replace('.', ' ').Replace("  ", " ").ToLowerInvariant().RemoveDiacritics();
+            var val = value.Replace('(', ' ').Replace(')', ' ').Replace('.', ' ').Replace("  ", " ").ToLowerInvariant().RemoveDiacritics();
+            var q = query.Replace('(', ' ').Replace(')', ' ').Replace('.', ' ').Replace("  ", " ").ToLowerInvariant().RemoveDiacritics();
             if (val.Contains(q))
                 return true;
 

@@ -35,28 +35,28 @@ namespace GtfsProvider.Services
 
             return vehicles.Select(v => new VehicleWLiveInfo
             {
-                TtssId = v.TtssId,
+                UniqueId = v.UniqueId,
                 GtfsId = v.GtfsId,
                 SideNo = v.SideNo,
                 Model = v.Model,
                 IsHeuristic = v.IsHeuristic,
                 HeuristicScore = v.HeuristicScore,
-                LiveInfo = liveInfo.GetValueOrDefault(v.TtssId)
+                LiveInfo = liveInfo.GetValueOrDefault(v.UniqueId)
             }).ToList();
         }
 
-        public Task<Vehicle?> GetByTtssId(City city, VehicleType type, long id)
+        public Task<Vehicle?> GetByUniqueId(City city, VehicleType type, long id)
         {
             var store = _dataStorage[city];
 
-            return store.GetVehicleByTtssId(id, type);
+            return store.GetVehicleByUniqueId(id, type);
         }
 
-        public Task<IReadOnlyCollection<Vehicle>> GetByTtssId(City city, VehicleType type, List<long> ids)
+        public Task<IReadOnlyCollection<Vehicle>> GetByUniqueId(City city, VehicleType type, List<long> ids)
         {
             var store = _dataStorage[city];
 
-            return store.GetVehiclesByTtssId(ids, type);
+            return store.GetVehiclesByUniqueId(ids, type);
         }
     }
 }

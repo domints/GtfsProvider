@@ -3,6 +3,8 @@ using GtfsProvider.Common.Utils;
 using GtfsProvider.CityClient.Krakow.Extensions;
 using GtfsProvider.MemoryStorage;
 using GtfsProvider.Services;
+using GtfsProvider.CityClient.Wroclaw.Extensions;
+using GtfsProvider.RedisStorage;
 
 namespace GtfsProvider.Api
 {
@@ -10,8 +12,11 @@ namespace GtfsProvider.Api
     {
         public static IServiceCollection AddAppServices(this IServiceCollection services)
         {
-            services.RegisterMemoryDataStorage();
-            services.RegisterKrakowDownloader();
+            services.AddLazyCache();
+            services.RegisterRedisDataStorage();
+            //services.RegisterMemoryDataStorage();
+            services.RegisterKrakowProvider();
+            services.RegisterWroclawProvider();
             services.AddHttpClient();
             services.AddMemoryCache();
             services.AddTransient<ICreationSafeCache, CreationSafeCache>();
@@ -20,6 +25,7 @@ namespace GtfsProvider.Api
             services.AddScoped<IVehicleService, VehicleService>();
             services.AddScoped<ILiveDataService, LiveDataService>();
             services.AddSingleton<ICityStorageFactory, CityStorageFactory>();
+            services.AddSingleton<IDataStorage, DataStorage>();
 
             return services;
         }

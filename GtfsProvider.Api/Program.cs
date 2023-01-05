@@ -83,14 +83,14 @@ app.MapGet("/vehicles/withLiveInfo", (IVehicleService vehicleService, CaseInsens
 app.MapGet("/vehicles/manyByTtss", (IVehicleService vehicleService, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> type, CommaSeparated<long> ids) =>
 {
     var resolvedCity = city ?? City.Krakow;
-    return vehicleService.GetByTtssId(resolvedCity, type, ids);
+    return vehicleService.GetByUniqueId(resolvedCity, type, ids);
 });
 
 app.MapGet("/vehicles/byTtss", async (IVehicleService vehicleService, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> type, long id) =>
 {
     var resolvedCity = city ?? City.Krakow;
 
-    var foundVehicle = await vehicleService.GetByTtssId(resolvedCity, type, id);
+    var foundVehicle = await vehicleService.GetByUniqueId(resolvedCity, type, id);
 
     if (foundVehicle == null)
         return Results.NotFound();

@@ -51,6 +51,13 @@ namespace GtfsProvider.Common.Extensions
             return JsonConvert.DeserializeObject<TRs>(responseContent);
         }
 
+        public static Task<TRs?> GetJson<TRq, TRs>(this HttpClient client, string url)
+            where TRq : new()
+            where TRs : new()
+        {
+            return client.GetJson<TRq, TRs>(url, System.Activator.CreateInstance<TRq>());
+        }
+
         public static async Task<TRs?> GetJson<TRq, TRs>(this HttpClient client, string url, TRq request)
             where TRq : new()
             where TRs : new()
