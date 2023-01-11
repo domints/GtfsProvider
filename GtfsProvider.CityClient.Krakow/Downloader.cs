@@ -55,12 +55,12 @@ namespace GtfsProvider.CityClient.Krakow
             var contents = await httpClient.GetStringAsync(_baseUrl);
             var fileList = _fileRegex.Matches(contents).Select(m => new { Name = m.Groups[1].Value, Time = DateTime.Parse(m.Groups[3].Value) }).ToList();
 
-            foreach(var file in fileList)
+            foreach (var file in fileList)
             {
                 var lastFileUpdate = await _fileStorage.GetFileTime(City, file.Name);
-                if(lastFileUpdate == null || lastFileUpdate.Value < file.Time)
+                if (lastFileUpdate == null || lastFileUpdate.Value < file.Time)
                 {
-                    using(var fileStream = await httpClient.GetStreamAsync($"{_baseUrl}{file.Name}"))
+                    using (var fileStream = await httpClient.GetStreamAsync($"{_baseUrl}{file.Name}"))
                     {
                         await _fileStorage.StoreFile(City, file.Name, fileStream);
                     }
@@ -88,10 +88,10 @@ namespace GtfsProvider.CityClient.Krakow
             List<BaseStop> busStops = new();
             List<BaseStop> tramStops = new();
 
-            if((await _fileStorage.GetFileTime(City, _gtfZipBus)).HasValue)
+            if ((await _fileStorage.GetFileTime(City, _gtfZipBus)).HasValue)
                 busStops = await ParseGtfsZip(_gtfZipBus, VehicleType.Bus);
 
-            if((await _fileStorage.GetFileTime(City, _gtfZipTram)).HasValue)
+            if ((await _fileStorage.GetFileTime(City, _gtfZipTram)).HasValue)
                 tramStops = await ParseGtfsZip(_gtfZipTram, VehicleType.Tram);
 
             var newStopGroups = busStops.Concat(tramStops).GroupBy(g => g.GroupId)
@@ -115,41 +115,50 @@ namespace GtfsProvider.CityClient.Krakow
 
         private async Task<List<BaseStop>> ParseGtfsZip(string name, VehicleType type)
         {
-            using (ZipFile zip = new ZipFile(await _fileStorage.LoadFile(City, name)))
+            try
             {
-                var stopsZipEntry = zip.GetEntry("stops.txt");
-                var stops = new Dictionary<string, Stop>();
-                using(var stopsStream = zip.GetInputStream(stopsZipEntry))
-                using(var reader = new StreamReader(stopsStream))
-                using(var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                using (ZipFile zip = new ZipFile(await _fileStorage.LoadFile(City, name)))
                 {
-                    while(await csv.ReadAsync())
+                    var stopsZipEntry = zip.GetEntry("stops.txt");
+                    var stops = new Dictionary<string, Stop>();
+                    using (var stopsStream = zip.GetInputStream(stopsZipEntry))
+                    using (var reader = new StreamReader(stopsStream))
+                    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                     {
-                        var entry = csv.GetRecord<StopEntry>();
-                        stops.Add(entry.Id, new Stop
+                        while (await csv.ReadAsync())
                         {
-                            GtfsId = entry.Id,
-                            GroupId = entry.GetGroupId(),
-                            Name = entry.Name,
-                            Latitude = entry.Lat,
-                            Longitude = entry.Lon,
-                            Type = type
-                        });
+                            var entry = csv.GetRecord<StopEntry>();
+                            stops.Add(entry.Id, new Stop
+                            {
+                                GtfsId = entry.Id,
+                                GroupId = entry.GetGroupId(),
+                                Name = entry.Name,
+                                Latitude = entry.Lat,
+                                Longitude = entry.Lon,
+                                Type = type
+                            });
+                        }
                     }
+
+                    var existingIds = (await _dataStorage.GetStopIdsByType(type))
+                        .ToHashSet();
+
+                    var toRemove = existingIds.ExceptIn(stops.Keys.ToHashSet());
+                    var toAdd = stops.ExceptIn(existingIds);
+
+                    await _dataStorage.RemoveStops(toRemove);
+                    await _dataStorage.AddStops(toAdd);
+
+                    var stopGroups = stops.GroupBy(s => s.Value.GroupId)
+                        .Select(g => new BaseStop { GroupId = g.Key, Name = g.First().Value.Name, Type = type });
+                    return stopGroups.ToList();
                 }
-
-                var existingIds = (await _dataStorage.GetStopIdsByType(type))
-                    .ToHashSet();
-
-                var toRemove = existingIds.ExceptIn(stops.Keys.ToHashSet());
-                var toAdd = stops.ExceptIn(existingIds);
-
-                await _dataStorage.RemoveStops(toRemove);
-                await _dataStorage.AddStops(toAdd);
-
-                var stopGroups = stops.GroupBy(s => s.Value.GroupId)
-                    .Select(g => new BaseStop { GroupId = g.Key, Name = g.First().Value.Name, Type = type });
-                return stopGroups.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load zip file {fileName} for city {city}. Ramoving that file.", name, City);
+                await _fileStorage.RemoveFile(City, name);
+                throw;
             }
         }
     }

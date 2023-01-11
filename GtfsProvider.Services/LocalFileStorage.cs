@@ -48,6 +48,21 @@ namespace GtfsProvider.Services
             return Task.FromResult((Stream)File.Open(LPath(city, name), FileMode.Open));
         }
 
+        public Task RemoveFile(City city, string name)
+        {
+            var filePath = LPath(city, name);
+            EnsureCityDir(city);
+
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+
+            RemoveEntry(city, name);
+
+            return Task.CompletedTask;
+        }
+
         private List<FileMetadata> LoadMetadata(City city)
         {
             var p = LPath(city, "metadata.json");
@@ -68,7 +83,9 @@ namespace GtfsProvider.Services
         private void RemoveEntry(City city, string name)
         {
             var metadata = LoadMetadata(city);
-            var entry = metadata.First(m => m.Name == name);
+            var entry = metadata.Find(m => m.Name == name);
+            if (entry == null)
+                return;
             metadata.Remove(entry);
             StoreMetadata(city, metadata);
         }

@@ -11,5 +11,6 @@ namespace GtfsProvider.Common
         Task<DateTime?> GetFileTime(City city, string name);
         Task StoreFile(City city, string name, Stream stream);
         Task<Stream> LoadFile(City city, string name);
+        Task RemoveFile(City city, string name);
     }
 }
