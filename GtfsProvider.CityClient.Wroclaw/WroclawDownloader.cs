@@ -28,8 +28,8 @@ namespace GtfsProvider.CityClient.Wroclaw
 
         public async Task RefreshIfNeeded()
         {
-            await DownloadVehicles();
             await DownloadStops();
+            await DownloadVehicles();
         }
 
         private async Task DownloadStops()

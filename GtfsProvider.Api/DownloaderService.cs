@@ -10,11 +10,14 @@ namespace GtfsProvider.Api
     {
         public IServiceProvider Services { get; }
         public bool Initialized { get; private set; }
+        private readonly ILogger<DownloaderService> _logger;
 
-        public DownloaderService(IServiceProvider services)
+        public DownloaderService(IServiceProvider services, ILogger<DownloaderService> logger)
         {
+            _logger = logger;
             Services = services;
         }
+        
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var firstBootDone = false;
@@ -28,7 +31,14 @@ namespace GtfsProvider.Api
                     var downloaders = scope.ServiceProvider.GetServices<IDownloader>();
                     foreach(var downloader in downloaders)
                     {
-                        await downloader.RefreshIfNeeded();
+                        try
+                        {
+                            await downloader.RefreshIfNeeded();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to execute downloader for {city}!", downloader.City);
+                        }
                     }
                     Initialized = true;
                 }

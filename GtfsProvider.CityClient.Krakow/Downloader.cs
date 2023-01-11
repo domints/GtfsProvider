@@ -67,8 +67,23 @@ namespace GtfsProvider.CityClient.Krakow
                 }
             }
 
-            await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus);
-            await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram);
+            try
+            {
+                await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load buses for Krakow! Continuing without them.");
+            }
+
+            try
+            {
+                await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileBus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load trams for Krakow! Continuing without them.");
+            }
 
             List<BaseStop> busStops = new();
             List<BaseStop> tramStops = new();
