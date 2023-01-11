@@ -79,6 +79,7 @@ namespace GtfsProvider.CityClient.Krakow
                 return false;
 
             List<Vehicle> matchedSingle = new();
+            Dictionary<string, Vehicle> matchedSideNos = new();
             List<(List<GTFSCleanVehicle> gtfs, List<TTSSCleanVehicle> ttss)> matchedMultiple = new();
             List<List<GTFSCleanVehicle>> unmatchedGtfs = new();
             List<List<TTSSCleanVehicle>> unmatchedTtss = new();
@@ -104,7 +105,14 @@ namespace GtfsProvider.CityClient.Krakow
                     GtfsId = g.Value[0].Id,
                     SideNo = g.Value[0].Num
                 };
+                if (matchedSideNos.ContainsKey(entry.SideNo))
+                {
+                    _logger.LogWarning("Already just matched this side no: {sideno}. What the hell? Skipping.", entry.SideNo);
+                    continue;
+                }
+
                 matchedSingle.Add(entry);
+                matchedSideNos.Add(entry.SideNo, entry);
             }
             foreach (var te in ttssTrips)
             {
@@ -276,8 +284,12 @@ namespace GtfsProvider.CityClient.Krakow
                             IsHeuristic = true,
                             HeuristicScore = confident
                         };
-                        matchedSingle.Add(veh);
-                        unmatchedGtfsDict.Remove(possibleGtfsId);
+                        if (!matchedSideNos.ContainsKey(veh.SideNo))
+                        {
+                            matchedSingle.Add(veh);
+                            matchedSideNos.Add(veh.SideNo, veh);
+                            unmatchedGtfsDict.Remove(possibleGtfsId);
+                        }
                     }
                     else
                     {
@@ -291,7 +303,11 @@ namespace GtfsProvider.CityClient.Krakow
                             IsHeuristic = true,
                             HeuristicScore = rule == null ? confident / 4 : confident
                         };
-                        matchedSingle.Add(veh);
+                        if (!matchedSideNos.ContainsKey(veh.SideNo))
+                        {
+                            matchedSingle.Add(veh);
+                            matchedSideNos.Add(veh.SideNo, veh);
+                        }
                     }
                 }
                 else
@@ -310,14 +326,16 @@ namespace GtfsProvider.CityClient.Krakow
                     if (byGtfsId.ContainsKey(kv.VehicleNo))
                         System.Diagnostics.Debugger.Break();
 
-                    matchedSingle.Add(new Vehicle
+                    var veh = new Vehicle
                     {
                         UniqueId = v.Id,
                         GtfsId = kv.VehicleNo,
                         SideNo = closeVehicles[0].SideNo,
                         IsHeuristic = true,
                         HeuristicScore = 80
-                    });
+                    };
+                    matchedSingle.Add(veh);
+                    matchedSideNos.Add(veh.SideNo, veh);
                 }
                 else
                 {
