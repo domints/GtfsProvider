@@ -164,6 +164,22 @@ namespace GtfsProvider.RedisStorage
             return result;
         }
 
+        public async Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type)
+        {
+            if (type == VehicleType.None)
+                return await GetAllVehicles();
+
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
+
+            var result = new List<Vehicle>();
+            await foreach (var vehicle in vehicles.Where(v => v.City == _city && v.ModelType == type))
+            {
+                result.Add(vehicle.ToAppModel(_modelCache));
+            }
+
+            return result;
+        }
+
         public async Task<Stop?> GetStopById(string stopId)
         {
             var stopColl = await RedisServices.GetCollection<StoreStop>();

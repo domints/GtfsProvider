@@ -31,6 +31,7 @@ namespace GtfsProvider.Common
         Task<IReadOnlyCollection<Vehicle>> GetVehiclesByUniqueId(List<long> vehicleIds, VehicleType type);
         Task<Vehicle?> GetVehicleBySideNo(string sideNo);
         Task<IReadOnlyCollection<Vehicle>> GetAllVehicles();
+        Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type);
 
         Task MarkSyncDone();
     }

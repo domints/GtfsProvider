@@ -133,6 +133,11 @@ namespace GtfsProvider.MemoryStorage
             return Task.FromResult(_vehiclesByGtfs.Values.AsReadOnly());
         }
 
+        public Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type)
+        {
+            return Task.FromResult((IReadOnlyCollection<Vehicle>)_vehiclesByGtfs.Values.Where(v => type == VehicleType.None || v.Model.Type == type).ToList());
+        }
+
         public Task<IReadOnlyCollection<Vehicle>> GetVehiclesByUniqueId(List<long> vehicleIds, VehicleType type)
         {
             var results = new List<Vehicle>();

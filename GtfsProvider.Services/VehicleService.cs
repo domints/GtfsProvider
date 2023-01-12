@@ -58,5 +58,18 @@ namespace GtfsProvider.Services
 
             return store.GetVehiclesByUniqueId(ids, type);
         }
+
+        public async Task<Dictionary<string, JacekkVehicle>> GetVehicleMapping(City city, VehicleType type)
+        {
+            var store = _dataStorage[city];
+            var vehs = await store.GetAllVehicles(type);
+            return vehs.ToDictionary(v => v.UniqueId.ToString(), v => new JacekkVehicle
+            {
+                Num = v.SideNo,
+                Type = v.Model.Name,
+                Low = (int)v.Model.LowFloor - 1,
+                VehicleType = v.Model.Type
+            });
+        }
     }
 }

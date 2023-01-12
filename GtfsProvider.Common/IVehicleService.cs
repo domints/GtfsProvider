@@ -13,5 +13,6 @@ namespace GtfsProvider.Common
         Task<IReadOnlyCollection<Vehicle>> GetByUniqueId(City city, VehicleType type, List<long> ids);
         Task<IReadOnlyCollection<Vehicle>> GetAll(City city);
         Task<IReadOnlyCollection<VehicleWLiveInfo>> GetAllWLiveInfo(City city);
+        Task<Dictionary<string, JacekkVehicle>> GetVehicleMapping(City city, VehicleType type);
     }
 }

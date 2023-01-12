@@ -558,7 +558,7 @@ namespace GtfsProvider.CityClient.Krakow
 
                 var lineData = line.Split('\t');
                 var modelName = lineData[3].Trim();
-                var lowFloor = lineData.Length > 4 ? (LowFloor)int.Parse(lineData[4].Trim()) : LowFloor.Unknown;
+                var lowFloor = lineData.Length > 4 ? (LowFloor)(int.Parse(lineData[4].Trim()) + 1) : LowFloor.Unknown;
                 if (type == VehicleType.Bus)
                     lowFloor = LowFloor.Full;
 
