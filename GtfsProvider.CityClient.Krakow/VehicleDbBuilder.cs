@@ -35,8 +35,8 @@ namespace GtfsProvider.CityClient.Krakow
         private long TTSSRefreshTime;
         private long GTFSRefreshTime;
 
-        private List<VehicleMatchRule> matchRules = new();
-        private Dictionary<string, VehicleModel> modelDict = new();
+        private List<VehicleMatchRule> _matchRules = new();
+        private Dictionary<string, VehicleModel> _modelDict = new();
 
         private Dictionary<long, List<TTSSCleanVehicle>> ttssTrips = new();
         private Dictionary<long, List<GTFSCleanVehicle>> gtfsTrips = new();
@@ -45,6 +45,7 @@ namespace GtfsProvider.CityClient.Krakow
         private List<KokonVehicleCompletePositionResponseModel> kokonPositions;
         private readonly KokonClient _kokonClient;
         private readonly IKrakowTTSSClient _tttssClient;
+        private readonly Guid _builderGuid;
 
         public VehicleDbBuilder(
             IFileStorage fileStorage,
@@ -60,6 +61,7 @@ namespace GtfsProvider.CityClient.Krakow
             _logger = logger;
             _kokonClient = kokonClient;
             _tttssClient = tttssClient;
+            _builderGuid = Guid.NewGuid();
         }
 
         public async Task<bool> Build(VehicleType type,
@@ -343,14 +345,42 @@ namespace GtfsProvider.CityClient.Krakow
                 }
             }
 
-            var existingSideNos = oldVehicles.ToDictionary(v => v.SideNo);
+            var existingSideNos = new Dictionary<string, Vehicle>();
+            foreach (var v in oldVehicles)
+            {
+                if (!existingSideNos.ContainsKey(v.SideNo))
+                {
+                    existingSideNos.Add(v.SideNo, v);
+                    continue;
+                }
+
+                var ev = existingSideNos[v.SideNo];
+                if (ev.IsHeuristic && !v.IsHeuristic)
+                {
+                    _logger.LogWarning("Ugh, found duplicate, {sideNo}", v.SideNo);
+                    existingSideNos[v.SideNo] = v;
+                }
+                else if (v.IsHeuristic && !ev.IsHeuristic)
+                {
+                    _logger.LogWarning("Ugh, found duplicate, {sideNo}", v.SideNo);
+                }
+                else if (v.IsHeuristic && ev.IsHeuristic)
+                {
+                    _logger.LogWarning("Ugh, found duplicate, {sideNo}, but both are heuristic.", v.SideNo);
+                }
+                else
+                {
+                    _logger.LogError("Ugh, found duplicate, {sideNo}, but none is heuristic. Screw this.", v.SideNo);
+                }
+            }
+            
             var added = 0;
             var updated = 0;
             foreach (var v in matchedSingle)
             {
                 var ruleMatch = FindMatchRule(v.GtfsId);
-                if (ruleMatch != null && modelDict.ContainsKey(ruleMatch.ModelName))
-                    v.Model = modelDict[ruleMatch.ModelName];
+                if (ruleMatch != null && _modelDict.ContainsKey(ruleMatch.ModelName))
+                    v.Model = _modelDict[ruleMatch.ModelName];
 
                 if (v.Model == null)
                 {
@@ -482,11 +512,12 @@ namespace GtfsProvider.CityClient.Krakow
 
         private VehicleMatchRule? FindMatchRule(long gtfsId)
         {
-            return matchRules.Find(r => r.FromId <= gtfsId && r.ToId >= gtfsId);
+            return _matchRules.Find(r => r.FromId <= gtfsId && r.ToId >= gtfsId);
         }
 
         private async Task<bool> BuildMatchRules(VehicleType type)
         {
+            _logger.LogInformation("Building matchrules for {type}, builder Id: {builderId}. Already got {cnt} rules.", type, _builderGuid, _matchRules.Count);
             var client = _httpClientFactory.CreateClient($"Downloader_Krakow_MatchRules");
             var matchRulesRawPhp = string.Empty;
             try
@@ -533,11 +564,11 @@ namespace GtfsProvider.CityClient.Krakow
                     ModelName = lineData[3].Trim()
                 };
 
-                matchRules.Add(matchRule);
+                _matchRules.Add(matchRule);
 
-                if (!modelDict.ContainsKey(modelName))
+                if (!_modelDict.ContainsKey(modelName))
                 {
-                    modelDict.Add(modelName, new VehicleModel
+                    _modelDict.Add(modelName, new VehicleModel
                     {
                         Name = modelName,
                         LowFloor = lowFloor,
