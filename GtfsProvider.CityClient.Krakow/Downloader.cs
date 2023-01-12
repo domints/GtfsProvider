@@ -78,7 +78,7 @@ namespace GtfsProvider.CityClient.Krakow
 
             try
             {
-                await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileBus);
+                await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram);
             }
             catch (Exception ex)
             {

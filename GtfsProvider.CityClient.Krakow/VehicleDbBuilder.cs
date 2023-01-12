@@ -113,7 +113,7 @@ namespace GtfsProvider.CityClient.Krakow
                     continue;
                 }
 
-                matchedSingle.Add(entry);
+                MatchedSingleAdd(matchedSingle, entry);
                 matchedSideNos.Add(entry.SideNo, entry);
             }
             foreach (var te in ttssTrips)
@@ -146,15 +146,6 @@ namespace GtfsProvider.CityClient.Krakow
                         }
                     }
 
-                    Vehicle entry = new Vehicle
-                    {
-                        UniqueId = mm.ttss[bestIx].Id,
-                        GtfsId = mm.gtfs[0].Id,
-                        SideNo = mm.gtfs[0].Num,
-                        IsHeuristic = true,
-                        HeuristicScore = (100 / mm.ttss.Count) + 10
-                    };
-
                     var others = mm.ttss.Where((_, ix) => ix != bestIx);
                     unmatchedTtss.Add(others.ToList());
                 }
@@ -171,15 +162,6 @@ namespace GtfsProvider.CityClient.Krakow
                             bestIx = i;
                         }
                     }
-
-                    Vehicle entry = new Vehicle
-                    {
-                        UniqueId = mm.ttss[0].Id,
-                        GtfsId = mm.gtfs[bestIx].Id,
-                        SideNo = mm.gtfs[bestIx].Num,
-                        IsHeuristic = true,
-                        HeuristicScore = (100 / mm.gtfs.Count) + 10
-                    };
 
                     var others = mm.gtfs.Where((_, ix) => ix != bestIx);
                     unmatchedGtfs.Add(others.ToList());
@@ -209,7 +191,7 @@ namespace GtfsProvider.CityClient.Krakow
 
             foreach (var t in unmatchedTtss.SelectMany(x => x))
             {
-                if(byTtssId.ContainsKey(t.Id))
+                if (byTtssId.ContainsKey(t.Id))
                     continue;
 
                 var closestUp = 0;
@@ -288,7 +270,7 @@ namespace GtfsProvider.CityClient.Krakow
                         };
                         if (!matchedSideNos.ContainsKey(veh.SideNo))
                         {
-                            matchedSingle.Add(veh);
+                            MatchedSingleAdd(matchedSingle, veh);
                             matchedSideNos.Add(veh.SideNo, veh);
                             unmatchedGtfsDict.Remove(possibleGtfsId);
                         }
@@ -307,7 +289,7 @@ namespace GtfsProvider.CityClient.Krakow
                         };
                         if (!matchedSideNos.ContainsKey(veh.SideNo))
                         {
-                            matchedSingle.Add(veh);
+                            MatchedSingleAdd(matchedSingle, veh);
                             matchedSideNos.Add(veh.SideNo, veh);
                         }
                     }
@@ -336,8 +318,11 @@ namespace GtfsProvider.CityClient.Krakow
                         IsHeuristic = true,
                         HeuristicScore = 80
                     };
-                    matchedSingle.Add(veh);
-                    matchedSideNos.Add(veh.SideNo, veh);
+                    if (!matchedSideNos.ContainsKey(veh.SideNo))
+                    {
+                        MatchedSingleAdd(matchedSingle, veh);
+                        matchedSideNos.Add(veh.SideNo, veh);
+                    }
                 }
                 else
                 {
@@ -373,18 +358,30 @@ namespace GtfsProvider.CityClient.Krakow
                     _logger.LogError("Ugh, found duplicate, {sideNo}, but none is heuristic. Screw this.", v.SideNo);
                 }
             }
-            
+
             var added = 0;
             var updated = 0;
             foreach (var v in matchedSingle)
             {
                 var ruleMatch = FindMatchRule(v.GtfsId);
+                if (ruleMatch == null)
+                {
+                    _logger.LogWarning("[NOMATCH] Cannot find model match for {type} no {id}! Heuristic: {heuristic} w score {score}. Skipping.", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
+                    continue;
+                }
+
+                if (ruleMatch != null && BuildSideNo(ruleMatch, v.GtfsId) != v.SideNo)
+                {
+                    _logger.LogWarning("[DIFFSIDE] Matched different sideno than was found in gtfs (Match: {matchSideNo}, GTFS: {gtfsSideNo}). Skipping!", BuildSideNo(ruleMatch, v.GtfsId), v.SideNo);
+                    continue;
+                }
+
                 if (ruleMatch != null && _modelDict.ContainsKey(ruleMatch.ModelName))
                     v.Model = _modelDict[ruleMatch.ModelName];
 
                 if (v.Model == null)
                 {
-                    _logger.LogWarning("Missing model information for {type} no {id}! Heuristic: {heuristic} w score {score}", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
+                    _logger.LogWarning("[MISSMODL] Missing model information for {type} no {id}! Heuristic: {heuristic} w score {score}", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
                     v.Model = new VehicleModel { Type = type };
                 }
 
@@ -397,6 +394,16 @@ namespace GtfsProvider.CityClient.Krakow
 
             _logger.LogInformation("Vehicle DB updated for {type}, {added} added entries, {updated} updated entries. Failed to match {failed} vehicles this time.", type, added, updated, failedToMatchCount);
             return true;
+        }
+
+        private string BuildSideNo(VehicleMatchRule rule, long gtfsId)
+        {
+            return string.Format("{0}{1:D3}", rule.Symbol, gtfsId);
+        }
+
+        private void MatchedSingleAdd(List<Vehicle> matchedSingle, Vehicle v)
+        {
+            matchedSingle.Add(v);
         }
 
         private async Task LoadKokonData()
