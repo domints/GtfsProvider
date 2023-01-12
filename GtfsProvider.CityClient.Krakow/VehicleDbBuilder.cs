@@ -372,8 +372,7 @@ namespace GtfsProvider.CityClient.Krakow
 
                 if (ruleMatch != null && BuildSideNo(ruleMatch, v.GtfsId) != v.SideNo)
                 {
-                    _logger.LogWarning("[DIFFSIDE] Matched different sideno than was found in gtfs (Match: {matchSideNo}, GTFS: {gtfsSideNo}). Skipping!", BuildSideNo(ruleMatch, v.GtfsId), v.SideNo);
-                    continue;
+                    _logger.LogWarning("[DIFFSIDE] Matched different sideno than was found in gtfs (Match: {matchSideNo}, GTFS: {gtfsSideNo}). Going with GTFS one!", BuildSideNo(ruleMatch, v.GtfsId), v.SideNo);
                 }
 
                 if (ruleMatch != null && _modelDict.ContainsKey(ruleMatch.ModelName))
