@@ -523,7 +523,6 @@ namespace GtfsProvider.CityClient.Krakow
 
         private async Task<bool> BuildMatchRules(VehicleType type)
         {
-            _logger.LogInformation("Building matchrules for {type}, builder Id: {builderId}. Already got {cnt} rules.", type, _builderGuid, _matchRules.Count);
             var client = _httpClientFactory.CreateClient($"Downloader_Krakow_MatchRules");
             var matchRulesRawPhp = string.Empty;
             try
