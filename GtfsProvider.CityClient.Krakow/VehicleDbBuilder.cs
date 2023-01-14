@@ -342,20 +342,20 @@ namespace GtfsProvider.CityClient.Krakow
                 var ev = existingSideNos[v.SideNo];
                 if (ev.IsHeuristic && !v.IsHeuristic)
                 {
-                    _logger.LogWarning("Ugh, found duplicate, {sideNo}", v.SideNo);
+                    _logger.LogWarning(Events.VehBuilderDuplicateSideNo, "Ugh, found duplicate, {sideNo}", v.SideNo);
                     existingSideNos[v.SideNo] = v;
                 }
                 else if (v.IsHeuristic && !ev.IsHeuristic)
                 {
-                    _logger.LogWarning("Ugh, found duplicate, {sideNo}", v.SideNo);
+                    _logger.LogWarning(Events.VehBuilderDuplicateSideNo, "Ugh, found duplicate, {sideNo}", v.SideNo);
                 }
                 else if (v.IsHeuristic && ev.IsHeuristic)
                 {
-                    _logger.LogWarning("Ugh, found duplicate, {sideNo}, but both are heuristic.", v.SideNo);
+                    _logger.LogWarning(Events.VehBuilderDuplicateSideNo, "Ugh, found duplicate, {sideNo}, but both are heuristic.", v.SideNo);
                 }
                 else
                 {
-                    _logger.LogError("Ugh, found duplicate, {sideNo}, but none is heuristic. Screw this.", v.SideNo);
+                    _logger.LogError(Events.VehBuilderDuplicateNonHeuristic, "Ugh, found duplicate, {sideNo}, but none is heuristic. Screw this.", v.SideNo);
                 }
             }
 
@@ -366,13 +366,13 @@ namespace GtfsProvider.CityClient.Krakow
                 var ruleMatch = FindMatchRule(v.GtfsId);
                 if (ruleMatch == null)
                 {
-                    _logger.LogWarning("[NOMATCH] Cannot find model match for {type} no {id}! Heuristic: {heuristic} w score {score}. Skipping.", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
+                    _logger.LogWarning(Events.VehBuilderNoMatch, "Cannot find model match for {type} no {id}! Heuristic: {heuristic} w score {score}. Skipping.", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
                     continue;
                 }
 
                 if (ruleMatch != null && BuildSideNo(ruleMatch, v.GtfsId) != v.SideNo)
                 {
-                    _logger.LogWarning("[DIFFSIDE] Matched different sideno than was found in gtfs (Match: {matchSideNo}, GTFS: {gtfsSideNo}). Going with GTFS one!", BuildSideNo(ruleMatch, v.GtfsId), v.SideNo);
+                    _logger.LogWarning(Events.VehBuilderMismatchSideNo, "Matched different sideno than was found in gtfs (Match: {matchSideNo}, GTFS: {gtfsSideNo}). Going with GTFS one!", BuildSideNo(ruleMatch, v.GtfsId), v.SideNo);
                 }
 
                 if (ruleMatch != null && _modelDict.ContainsKey(ruleMatch.ModelName))
@@ -380,7 +380,7 @@ namespace GtfsProvider.CityClient.Krakow
 
                 if (v.Model == null)
                 {
-                    _logger.LogWarning("[MISSMODL] Missing model information for {type} no {id}! Heuristic: {heuristic} w score {score}", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
+                    _logger.LogWarning(Events.VehBuilderMissModelInfo, "Missing model information for {type} no {id}! Heuristic: {heuristic} w score {score}", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
                     v.Model = new VehicleModel { Type = type };
                 }
 
@@ -391,7 +391,7 @@ namespace GtfsProvider.CityClient.Krakow
                     added++;
             }
 
-            _logger.LogInformation("Vehicle DB updated for {type}, {added} added entries, {updated} updated entries. Failed to match {failed} vehicles this time.", type, added, updated, failedToMatchCount);
+            _logger.LogInformation(Events.VehicleDbUpdated, "Vehicle DB in {city} updated for {type}, {added} added entries, {updated} updated entries. Failed to match {failed} vehicles this time.", City.Krakow, type, added, updated, failedToMatchCount);
             return true;
         }
 

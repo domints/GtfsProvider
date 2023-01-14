@@ -37,7 +37,7 @@ namespace GtfsProvider.Api
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Failed to execute downloader for {city}!", downloader.City);
+                            _logger.LogError(Events.FailedToExecuteDownloader, ex, "Failed to execute downloader for {city}!", downloader.City);
                         }
                     }
                     Initialized = true;
