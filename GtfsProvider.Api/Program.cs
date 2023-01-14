@@ -5,9 +5,13 @@ using GtfsProvider.Common.Attributes;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.Extensions.Configuration;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Host.UseSerilog(
+            (hostingContext, loggerConfiguration) =>
+                loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
 builder.Services.AddAppServices();
 builder.Services.AddHostedService<DownloaderService>();
 builder.Services.AddCors();
@@ -94,5 +98,5 @@ app.MapGet("/krakow/mapping", (IVehicleService vehicleService, CaseInsensitiveBi
     var resolvedType = vehicleType ?? VehicleType.None;
     return vehicleService.GetVehicleMapping(City.Krakow, resolvedType);
 });
-
+app.Logger.LogInformation("Application is being started.");
 app.Run();
