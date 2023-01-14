@@ -9,6 +9,7 @@ namespace GtfsProvider.Common
     public static class Events
     {
         public static EventId VehicleDbUpdated = new EventId(100, "VehicleDbUpdated");
+        public static EventId FailedToExecuteDownloader = new EventId(200, "FailedToExecuteDownloader");
         public static EventId VehBuilderNoMatch = new EventId(1000, "NoMatchRule");
         public static EventId VehBuilderMismatchSideNo = new EventId(1001, "MismatchSideNo");
         public static EventId VehBuilderMissModelInfo = new EventId(1002, "MissingModelInfo");
