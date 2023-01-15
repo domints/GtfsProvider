@@ -10,6 +10,7 @@ using GtfsProvider.Common.Models;
 using GtfsProvider.RedisStorage.Models;
 using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Redis.OM;
 using Redis.OM.Searching;
 using Redis.OM.Searching.Query;
@@ -23,16 +24,18 @@ namespace GtfsProvider.RedisStorage
         private readonly ConcurrentDictionary<string, BaseStop> _stopGroups = new();
         private readonly City _city = City.Default;
         private readonly IAppCache _cache;
+        private readonly ILogger<RedisCityStorage> _logger;
 
         public virtual City City => _city;
 
         public RedisCityStorage()
         { }
 
-        public RedisCityStorage(City city, IAppCache cache)
+        public RedisCityStorage(City city, IAppCache cache, ILogger<RedisCityStorage> logger)
         {
             _city = city;
-            this._cache = cache;
+            _cache = cache;
+            _logger = logger;
         }
 
         public async Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle, Dictionary<string, Vehicle> existingSideNos)
@@ -47,6 +50,7 @@ namespace GtfsProvider.RedisStorage
             }
 
             var result = AddUpdateResult.Added;
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
 
             if (existingSideNos.ContainsKey(vehicle.SideNo))
             {
@@ -58,6 +62,10 @@ namespace GtfsProvider.RedisStorage
 
                 if (vehicle.Model != null)
                 {
+                    var vehsToUpdate = await vehicles.Where(v => v.GtfsId == vehicle.GtfsId || v.UniqueId == vehicle.UniqueId || v.GtfsId == old.GtfsId || v.UniqueId == old.UniqueId || v.SideNo == vehicle.SideNo).ToListAsync();
+                    foreach(var toRemove in vehsToUpdate.Where(v => v.ModelType == vehicle.Model.Type))
+                        await vehicles.DeleteAsync(toRemove);
+
                     _cache.Remove(VehicleCacheKey(vehicle.Model.Type, vehicle.UniqueId));
                     _cache.GetOrAdd(VehicleCacheKey(vehicle.Model.Type, vehicle.UniqueId), e =>
                     {
@@ -65,9 +73,12 @@ namespace GtfsProvider.RedisStorage
                         return vehicle;
                     });
                 }
+                else
+                {
+                    _logger.LogError(Events.VehicleWithNullModel, "Vehicle with null model! SideNo: {sideNo}, GtfsId: {gtfsId}, UniqId: {uniqueId}, Heuristic: {heuristicScore}", vehicle.SideNo, vehicle.GtfsId, vehicle.UniqueId, vehicle.HeuristicScore);
+                }
             }
 
-            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
             var storeVehicle = vehicle.ToStoreModel(_city);
             await vehicles.InsertAsync(storeVehicle);
 

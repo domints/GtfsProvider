@@ -80,7 +80,7 @@ namespace GtfsProvider.CityClient.Krakow
             if (!offset.HasValue)
                 return false;
 
-            List<Vehicle> matchedSingle = new();
+            List<(int sourceId, Vehicle vehicle)> matchedSingle = new();
             Dictionary<string, Vehicle> matchedSideNos = new();
             List<(List<GTFSCleanVehicle> gtfs, List<TTSSCleanVehicle> ttss)> matchedMultiple = new();
             List<List<GTFSCleanVehicle>> unmatchedGtfs = new();
@@ -107,27 +107,31 @@ namespace GtfsProvider.CityClient.Krakow
                     GtfsId = g.Value[0].Id,
                     SideNo = g.Value[0].Num
                 };
+                // Nevelo hack
+                if (entry.GtfsId == 899 && string.IsNullOrWhiteSpace(entry.SideNo))
+                    entry.SideNo = "RY899";
+
                 if (matchedSideNos.ContainsKey(entry.SideNo))
                 {
                     _logger.LogWarning("Already just matched this side no: {sideno}. What the hell? Skipping.", entry.SideNo);
                     continue;
                 }
 
-                MatchedSingleAdd(matchedSingle, entry);
+                matchedSingle.Add((1, entry));
                 matchedSideNos.Add(entry.SideNo, entry);
             }
             foreach (var te in ttssTrips)
             {
                 if (
                     !matchedMultiple.Any(mm => mm.ttss == te.Value) &&
-                    !matchedSingle.Any(ms => te.Value.Any(t => t.Id == ms.UniqueId))
+                    !matchedSingle.Any(ms => te.Value.Any(t => t.Id == ms.vehicle.UniqueId))
                     )
                 {
                     unmatchedTtss.Add(te.Value);
                 }
             }
-            Dictionary<long, Vehicle> byGtfsId = matchedSingle.ToDictionary(k => k.GtfsId);
-            Dictionary<long, Vehicle> byTtssId = matchedSingle.ToDictionary(k => k.UniqueId);
+            Dictionary<long, Vehicle> byGtfsId = matchedSingle.ToDictionary(k => k.vehicle.GtfsId, v => v.vehicle);
+            Dictionary<long, Vehicle> byTtssId = matchedSingle.ToDictionary(k => k.vehicle.UniqueId, v => v.vehicle);
             Dictionary<long, GTFSCleanVehicle> unmatchedGtfsDict = unmatchedGtfs.SelectMany(u => u).ToDictionary(u => u.Id);
 
             foreach (var mm in matchedMultiple)
@@ -175,8 +179,8 @@ namespace GtfsProvider.CityClient.Krakow
 
             List<TTSSCleanVehicle> vehiclesLeftForKokonMatch = new();
             var theoreticalFirstTtssId = matchedSingle
-                .OrderBy(v => v.GtfsId)
-                .Select(v => v.UniqueId - (v.GtfsId * 2) - 2)
+                .OrderBy(v => v.vehicle.GtfsId)
+                .Select(v => v.vehicle.UniqueId - (v.vehicle.GtfsId * 2) - 2)
                 .First();
 
             var oldVehicles = await _storage.GetAllVehicles();
@@ -270,7 +274,7 @@ namespace GtfsProvider.CityClient.Krakow
                         };
                         if (!matchedSideNos.ContainsKey(veh.SideNo))
                         {
-                            MatchedSingleAdd(matchedSingle, veh);
+                            matchedSingle.Add((2, veh));
                             matchedSideNos.Add(veh.SideNo, veh);
                             unmatchedGtfsDict.Remove(possibleGtfsId);
                         }
@@ -289,7 +293,7 @@ namespace GtfsProvider.CityClient.Krakow
                         };
                         if (!matchedSideNos.ContainsKey(veh.SideNo))
                         {
-                            MatchedSingleAdd(matchedSingle, veh);
+                            matchedSingle.Add((3, veh));
                             matchedSideNos.Add(veh.SideNo, veh);
                         }
                     }
@@ -320,7 +324,7 @@ namespace GtfsProvider.CityClient.Krakow
                     };
                     if (!matchedSideNos.ContainsKey(veh.SideNo))
                     {
-                        MatchedSingleAdd(matchedSingle, veh);
+                        matchedSingle.Add((4, veh));
                         matchedSideNos.Add(veh.SideNo, veh);
                     }
                 }
@@ -361,30 +365,30 @@ namespace GtfsProvider.CityClient.Krakow
 
             var added = 0;
             var updated = 0;
-            foreach (var v in matchedSingle)
+            foreach (var match in matchedSingle)
             {
-                var ruleMatch = FindMatchRule(v.GtfsId);
+                var ruleMatch = FindMatchRule(match.vehicle.GtfsId);
                 if (ruleMatch == null)
                 {
-                    _logger.LogWarning(Events.VehBuilderNoMatch, "Cannot find model match for {type} no {id}! Heuristic: {heuristic} w score {score}. Skipping.", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
+                    _logger.LogWarning(Events.VehBuilderNoMatch, "Cannot find model match for {type} no {id}! Heuristic: {heuristic} w score {score}. Skipping.", type, match.vehicle.GtfsId, match.vehicle.IsHeuristic, match.vehicle.HeuristicScore);
                     continue;
                 }
 
-                if (ruleMatch != null && BuildSideNo(ruleMatch, v.GtfsId) != v.SideNo)
+                if (ruleMatch != null && BuildSideNo(ruleMatch, match.vehicle.GtfsId) != match.vehicle.SideNo)
                 {
-                    _logger.LogWarning(Events.VehBuilderMismatchSideNo, "Matched different sideno than was found in gtfs (Match: {matchSideNo}, GTFS: {gtfsSideNo}). Going with GTFS one!", BuildSideNo(ruleMatch, v.GtfsId), v.SideNo);
+                    _logger.LogWarning(Events.VehBuilderMismatchSideNo, "Matched different sideno than was found in gtfs (Match: {matchSideNo}, GTFS: {gtfsSideNo}). Going with GTFS one!", BuildSideNo(ruleMatch, match.vehicle.GtfsId), match.vehicle.SideNo);
                 }
 
                 if (ruleMatch != null && _modelDict.ContainsKey(ruleMatch.ModelName))
-                    v.Model = _modelDict[ruleMatch.ModelName];
+                    match.vehicle.Model = _modelDict[ruleMatch.ModelName];
 
-                if (v.Model == null)
+                if (match.vehicle.Model == null)
                 {
-                    _logger.LogWarning(Events.VehBuilderMissModelInfo, "Missing model information for {type} no {id}! Heuristic: {heuristic} w score {score}", type, v.GtfsId, v.IsHeuristic, v.HeuristicScore);
-                    v.Model = new VehicleModel { Type = type };
+                    _logger.LogWarning(Events.VehBuilderMissModelInfo, "Missing model information for {type} no {id}! Heuristic: {heuristic} w score {score}", type, match.vehicle.GtfsId, match.vehicle.IsHeuristic, match.vehicle.HeuristicScore);
+                    match.vehicle.Model = new VehicleModel { Type = type };
                 }
 
-                var addOrUpdateResult = await _storage.AddOrUpdateVehicle(v, existingSideNos);
+                var addOrUpdateResult = await _storage.AddOrUpdateVehicle(match.vehicle, existingSideNos);
                 if (addOrUpdateResult == AddUpdateResult.Updated)
                     updated++;
                 else if (addOrUpdateResult == AddUpdateResult.Added)
