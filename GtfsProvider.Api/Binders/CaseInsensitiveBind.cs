@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Metadata;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GtfsProvider.Api.Binders
 {
-    public class CaseInsensitiveBind<TEnum> where TEnum : struct, Enum
+    public class CaseInsensitiveBind<TEnum>
+        where TEnum : struct, Enum
     {
         public TEnum Value { get; set; }
         public CaseInsensitiveBind(TEnum value)

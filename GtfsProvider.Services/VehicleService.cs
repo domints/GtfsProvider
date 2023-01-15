@@ -59,6 +59,28 @@ namespace GtfsProvider.Services
             return store.GetVehiclesByUniqueId(ids, type);
         }
 
+        public async Task<VehicleWLiveInfo?> GetLiveInfoBySideNo(City city, string sideNo)
+        {
+            var store = _dataStorage[city];
+
+            var vehicle = await store.GetVehicleBySideNo(sideNo);
+
+            if (vehicle == null)
+                return null;
+
+            var liveInfo = (await _liveDataService.GetAllPositions(city)).ToDictionary(i => i.VehicleId);
+            return new VehicleWLiveInfo
+            {
+                UniqueId = vehicle.UniqueId,
+                GtfsId = vehicle.GtfsId,
+                SideNo = vehicle.SideNo,
+                Model = vehicle.Model,
+                IsHeuristic = vehicle.IsHeuristic,
+                HeuristicScore = vehicle.HeuristicScore,
+                LiveInfo = liveInfo.GetValueOrDefault(vehicle.UniqueId)
+            };
+        }
+
         public async Task<Dictionary<string, JacekkVehicle>> GetVehicleMapping(City city, VehicleType type)
         {
             var store = _dataStorage[city];
