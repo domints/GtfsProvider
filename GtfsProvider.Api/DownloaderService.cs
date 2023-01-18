@@ -34,7 +34,9 @@ namespace GtfsProvider.Api
                 {
                     try
                     {
+                        _logger.LogInformation("Downloading data for {city}", downloader.City);
                         await downloader.RefreshIfNeeded();
+                        _logger.LogInformation("Done downloading for {city}", downloader.City);
                     }
                     catch (Exception ex)
                     {
@@ -44,6 +46,7 @@ namespace GtfsProvider.Api
 
                 if (!Initialized)
                 {
+                    _logger.LogInformation("Initialization done. API ready for requests.");
                     var server = Services.GetService<Microsoft.AspNetCore.Hosting.Server.IServer>();
                     if (server != null)
                     {
