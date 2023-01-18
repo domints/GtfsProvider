@@ -8,6 +8,7 @@ using GtfsProvider.Common;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
+using Microsoft.Extensions.Logging;
 
 namespace GtfsProvider.CityClient.Krakow
 {
@@ -16,13 +17,16 @@ namespace GtfsProvider.CityClient.Krakow
         public City City => City.Krakow;
         private readonly IKrakowTTSSClient _ttssClient;
         private readonly ICityStorage _dataStorage;
+        private readonly ILogger<KrakowLiveDataProvider> _logger;
 
         public KrakowLiveDataProvider(
             IKrakowTTSSClient ttssClient,
-            IDataStorage dataStorage)
+            IDataStorage dataStorage,
+            ILogger<KrakowLiveDataProvider> logger)
         {
             _ttssClient = ttssClient;
             _dataStorage = dataStorage[City];
+            _logger = logger;
         }
 
         public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame)
@@ -76,8 +80,26 @@ namespace GtfsProvider.CityClient.Krakow
 
         public async Task<List<VehicleLiveInfo>> GetLivePositions()
         {
-            var busInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Bus);
-            var tramInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Tram);
+            TTSSVehiclesInfo? busInfo = null;
+            try
+            {
+                busInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Bus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to download vehicle positions from Bus API.");
+            }
+            
+            TTSSVehiclesInfo? tramInfo = null;
+            try
+            {
+                tramInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Tram);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to download vehicle positions from Tram API.");
+            }
+
             return (busInfo?.Vehicles ?? new List<TTSSVehicle>())
                 .Concat(tramInfo?.Vehicles ?? new List<TTSSVehicle>())
                 .Where(i => !i.IsDeleted)
