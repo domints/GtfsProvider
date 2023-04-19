@@ -24,7 +24,7 @@ namespace GtfsProvider.CityClient.Krakow.Kokon
         public bool IsBus { get; set; }
 
         [JsonPropertyName("is_on")]
-        public bool IsOn { get; set; }
+        public bool? IsOn { get; set; }
 
         [JsonPropertyName("variant")]
         public string Variant { get; set; }

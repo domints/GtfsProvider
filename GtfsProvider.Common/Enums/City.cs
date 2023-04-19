@@ -14,7 +14,7 @@ namespace GtfsProvider.Common.Enums
         [Ignore]
         [Display(Name = "Katowice")]
         Katowice,
-        
+
         [Display(Name = "Wrocław")]
         Wroclaw
     }
