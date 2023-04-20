@@ -30,7 +30,7 @@ namespace GtfsProvider.CityClient.Krakow
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VehicleDbBuilder _tramVehicleDbBuilder;
         private readonly VehicleDbBuilder _busVehicleDbBuilder;
-        private readonly Regex _fileRegex = new("<a href=\"([A-z\\.]+)\">([A-z\\.]+)<\\/a>\\s+([0-9]{2}-[A-z]{3}-[0-9]{4}\\s[0-9]{2}:[0-9]{2})", RegexOptions.Compiled | RegexOptions.Multiline);
+        private readonly Regex _fileRegex = new("<a href=\"([A-z\\._]+)\">([A-z\\._]+)<\\/a>\\s+<\\/td><td align=\"right\">([0-9]{4}-[0-9]{2}-[0-9]{2}\\s[0-9]{2}:[0-9]{2})", RegexOptions.Compiled | RegexOptions.Multiline);
         private readonly ILogger<Downloader> _logger;
 
         public Downloader(
