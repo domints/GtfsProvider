@@ -19,7 +19,7 @@ namespace GtfsProvider.Services
 
         private readonly string BasePath;
         
-        public Task<DateTime?> GetFileTime(City city, string name)
+        public Task<DateTime?> GetFileTime(City city, string name, CancellationToken _)
         {
             var metadata = LoadMetadata(city).FirstOrDefault(m => m.Name == name);
             if(metadata != null && File.Exists(LPath(city, name)))
@@ -31,24 +31,24 @@ namespace GtfsProvider.Services
             return Task.FromResult<DateTime?>(null);
         }
 
-        public async Task StoreFile(City city, string name, Stream stream)
+        public async Task StoreFile(City city, string name, Stream stream, CancellationToken cancellationToken)
         {
             var time = DateTime.Now;
             using(var fileStream = File.Open(LPath(city, name), FileMode.Create))
             {
                 stream.CopyTo(fileStream);
-                await fileStream.FlushAsync();
+                await fileStream.FlushAsync(cancellationToken);
             }
 
             AddOrUpdateEntry(city, name, time);
         }
 
-        public Task<Stream> LoadFile(City city, string name)
+        public Task<Stream> LoadFile(City city, string name, CancellationToken _)
         {
             return Task.FromResult((Stream)File.Open(LPath(city, name), FileMode.Open));
         }
 
-        public Task RemoveFile(City city, string name)
+        public Task RemoveFile(City city, string name, CancellationToken _)
         {
             var filePath = LPath(city, name);
             EnsureCityDir(city);

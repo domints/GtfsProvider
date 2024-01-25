@@ -12,13 +12,13 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
         public bool IsDeleted { get; set; }
 
         [JsonProperty("id")]
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [JsonProperty("path")]
-        public IList<Path> Path { get; set; }
+        public IList<Path> Path { get; set; } = new List<Path>();
 
         [JsonProperty("color")]
-        public string Color { get; set; }
+        public string Color { get; set; } = string.Empty;
 
         [JsonProperty("heading")]
         public int? Heading { get; set; }
@@ -27,13 +27,13 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
         public int? Latitude { get; set; }
 
         [JsonProperty("name")]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [JsonProperty("tripId")]
-        public string TripId { get; set; }
+        public string TripId { get; set; } = string.Empty;
 
         [JsonProperty("category")]
-        public string Category { get; set; }
+        public string Category { get; set; } = string.Empty;
 
         [JsonProperty("longitude")]
         public int? Longitude { get; set; }

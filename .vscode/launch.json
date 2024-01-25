@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/GtfsProvider.Api/bin/Debug/net7.0/GtfsProvider.Api.dll",
+            "program": "${workspaceFolder}/GtfsProvider.Api/bin/Debug/net8.0/GtfsProvider.Api.dll",
             "args": [],
             "cwd": "${workspaceFolder}/GtfsProvider.Api",
             "stopAtEntry": false,

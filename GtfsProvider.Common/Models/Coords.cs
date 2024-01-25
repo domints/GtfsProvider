@@ -18,5 +18,7 @@ namespace GtfsProvider.Common.Models
         {
             return $"https://www.google.com/maps/@{Latitude:N7},{Longitude:N7},18z";
         }
+
+        public static Coords Zero => new Coords(0d, 0d);
     }
 }

@@ -38,7 +38,7 @@ namespace GtfsProvider.RedisStorage
             _logger = logger;
         }
 
-        public async Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle, Dictionary<string, Vehicle> existingSideNos)
+        public async Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle, Dictionary<string, Vehicle> existingSideNos, CancellationToken cancellationToken)
         {
             var modelKey = vehicle.Model?.Name ?? string.Empty;
             if (string.IsNullOrWhiteSpace(vehicle.Model?.Name))
@@ -50,7 +50,7 @@ namespace GtfsProvider.RedisStorage
             }
 
             var result = AddUpdateResult.Added;
-            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>(cancellationToken);
 
             if (existingSideNos.ContainsKey(vehicle.SideNo))
             {
@@ -64,7 +64,7 @@ namespace GtfsProvider.RedisStorage
                 {
                     var vehsToUpdate = await vehicles.Where(v => v.GtfsId == vehicle.GtfsId || v.UniqueId == vehicle.UniqueId || v.GtfsId == old.GtfsId || v.UniqueId == old.UniqueId || v.SideNo == vehicle.SideNo).ToListAsync();
                     foreach(var toRemove in vehsToUpdate.Where(v => v.ModelType == vehicle.Model.Type))
-                        await vehicles.DeleteAsync(toRemove);
+                        await vehicles.DeleteAsync(toRemove).WaitAsync(cancellationToken);
 
                     _cache.Remove(VehicleCacheKey(vehicle.Model.Type, vehicle.UniqueId));
                     _cache.GetOrAdd(VehicleCacheKey(vehicle.Model.Type, vehicle.UniqueId), e =>
@@ -80,27 +80,29 @@ namespace GtfsProvider.RedisStorage
             }
 
             var storeVehicle = vehicle.ToStoreModel(_city);
-            await vehicles.InsertAsync(storeVehicle);
+            await vehicles.InsertAsync(storeVehicle).WaitAsync(cancellationToken);
 
             return result;
         }
 
-        public async Task AddStopGroups(IEnumerable<BaseStop> stopGroups)
+        public async Task AddStopGroups(IEnumerable<BaseStop> stopGroups, CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStopGroup>();
-            await stopColl.Insert(stopGroups.Select(g => g.ToStoreModel(_city)));
+            var stopColl = await RedisServices.GetCollection<StoreStopGroup>(cancellationToken);
+            await stopColl.InsertAsync(stopGroups.Select(g => g.ToStoreModel(_city))).WaitAsync(cancellationToken);
 
             foreach (var group in stopGroups)
+            {
                 _stopGroups.AddOrUpdate(group.GroupId, group, (_, _) => group);
+            }
         }
 
-        public async Task AddStops(IEnumerable<Stop> stops)
+        public async Task AddStops(IEnumerable<Stop> stops, CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStop>();
-            await stopColl.Insert(stops.Select(s => s.ToStoreModel(_city)));
+            var stopColl = await RedisServices.GetCollection<StoreStop>(cancellationToken);
+            await stopColl.InsertAsync(stops.Select(s => s.ToStoreModel(_city))).WaitAsync(cancellationToken);
         }
 
-        public Task<List<BaseStop>> FindStops(string pattern, int? limit)
+        public Task<List<BaseStop>> FindStops(string pattern, int? limit, CancellationToken _)
         {
             var query = _stopGroups.Values
                 .Where(s => s.Name.Matches(pattern));
@@ -111,121 +113,127 @@ namespace GtfsProvider.RedisStorage
             return Task.FromResult(result);
         }
 
-        public async Task<IReadOnlyCollection<string>> GetAllStopGroupIds()
+        public async Task<IReadOnlyCollection<string>> GetAllStopGroupIds(CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStopGroup>();
+            var stopColl = await RedisServices.GetCollection<StoreStopGroup>(cancellationToken);
 
             var result = new List<string>();
             await foreach (var group in stopColl.Where(s => s.City == _city))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 result.Add(group.GroupId);
             }
 
             return result;
         }
 
-        public async Task<List<string>> GetAllStopIds()
+        public async Task<List<string>> GetAllStopIds(CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStop>();
+            var stopColl = await RedisServices.GetCollection<StoreStop>(cancellationToken);
 
             var result = new List<string>();
             await foreach (var stop in stopColl.Where(s => s.City == _city))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 result.Add(stop.GtfsId);
             }
 
             return result;
         }
 
-        public async Task<List<Stop>> GetAllStops()
+        public async Task<List<Stop>> GetAllStops(CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStop>();
+            var stopColl = await RedisServices.GetCollection<StoreStop>(cancellationToken);
 
             var result = new List<Stop>();
             await foreach (var stop in stopColl.Where(s => s.City == _city))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 result.Add(stop.ToAppModel());
             }
 
             return result;
         }
 
-        public async Task<List<BaseStop>> GetAllStopGroups()
+        public async Task<List<BaseStop>> GetAllStopGroups(CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStopGroup>();
+            var stopColl = await RedisServices.GetCollection<StoreStopGroup>(cancellationToken);
             var result = new List<BaseStop>();
             await foreach (var group in stopColl.Where(s => s.City == _city))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 result.Add(group.ToAppModel());
             }
 
             return result;
         }
 
-        public async Task<IReadOnlyCollection<Vehicle>> GetAllVehicles()
+        public async Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(CancellationToken cancellationToken)
         {
-            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>(cancellationToken);
 
             var result = new List<Vehicle>();
             await foreach (var vehicle in vehicles.Where(v => v.City == _city))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 result.Add(vehicle.ToAppModel(_modelCache));
             }
 
             return result;
         }
 
-        public async Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type)
+        public async Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type, CancellationToken cancellationToken)
         {
             if (type == VehicleType.None)
-                return await GetAllVehicles();
+                return await GetAllVehicles(cancellationToken);
 
-            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>(cancellationToken);
 
             var result = new List<Vehicle>();
             await foreach (var vehicle in vehicles.Where(v => v.City == _city && v.ModelType == type))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 result.Add(vehicle.ToAppModel(_modelCache));
             }
 
             return result;
         }
 
-        public async Task<Stop?> GetStopById(string stopId)
+        public async Task<Stop?> GetStopById(string stopId, CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStop>();
-            var stop = await stopColl.Where(s => s.City == _city && s.GtfsId == stopId).FirstOrDefaultAsync();
+            var stopColl = await RedisServices.GetCollection<StoreStop>(cancellationToken);
+            var stop = await stopColl.Where(s => s.City == _city && s.GtfsId == stopId).FirstOrDefaultAsync().WaitAsync(cancellationToken);
             return stop?.ToAppModel();
         }
 
-        public async Task<List<string>> GetStopIdsByType(VehicleType type)
+        public async Task<List<string>> GetStopIdsByType(VehicleType type, CancellationToken cancellationToken)
         {
-            var stopColl = await RedisServices.GetCollection<StoreStop>();
-            var stops = await stopColl.Where(s => s.City == _city && s.Type == type).ToListAsync();
+            var stopColl = await RedisServices.GetCollection<StoreStop>(cancellationToken);
+            var stops = await stopColl.Where(s => s.City == _city && s.Type == type).ToListAsync().WaitAsync(cancellationToken);
             var stopIds = stops?.Select(s => s.GtfsId).ToList();
             return stopIds?.ToList() ?? new List<string>();
         }
 
-        public async Task<Vehicle?> GetVehicleByGtfsId(long vehicleId, VehicleType type)
+        public async Task<Vehicle?> GetVehicleByGtfsId(long vehicleId, VehicleType type, CancellationToken cancellationToken)
         {
-            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
-            var veh = await vehicles.Where(v => v.City == _city && v.ModelType == type && v.GtfsId == vehicleId).FirstOrDefaultAsync();
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>(cancellationToken);
+            var veh = await vehicles.Where(v => v.City == _city && v.ModelType == type && v.GtfsId == vehicleId).FirstOrDefaultAsync().WaitAsync(cancellationToken);
             return veh?.ToAppModel(_modelCache);
         }
 
-        public async Task<Vehicle?> GetVehicleBySideNo(string sideNo)
+        public async Task<Vehicle?> GetVehicleBySideNo(string sideNo, CancellationToken cancellationToken)
         {
-            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
-            var veh = await vehicles.Where(v => v.City == _city && v.SideNo == sideNo).FirstOrDefaultAsync();
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>(cancellationToken);
+            var veh = await vehicles.Where(v => v.City == _city && v.SideNo == sideNo).FirstOrDefaultAsync().WaitAsync(cancellationToken);
             return veh?.ToAppModel(_modelCache);
         }
 
-        public async Task<Vehicle?> GetVehicleByUniqueId(long vehicleId, VehicleType type)
+        public async Task<Vehicle?> GetVehicleByUniqueId(long vehicleId, VehicleType type, CancellationToken cancellationToken)
         {
             return await _cache.GetOrAddAsync(VehicleCacheKey(type, vehicleId), async e =>
             {
-                var vehicles = await RedisServices.GetCollection<StoreVehicle>();
-                var veh = await vehicles.Where(v => v.City == _city && v.ModelType == type && v.UniqueId == vehicleId).FirstOrDefaultAsync();
+                var vehicles = await RedisServices.GetCollection<StoreVehicle>(cancellationToken);
+                var veh = await vehicles.Where(v => v.City == _city && v.ModelType == type && v.UniqueId == vehicleId).FirstOrDefaultAsync().WaitAsync(cancellationToken);
                 var appVeh = veh?.ToAppModel(_modelCache);
 
                 e.AbsoluteExpirationRelativeToNow = appVeh == null ? TimeSpan.FromSeconds(15) : TimeSpan.FromDays(2);
@@ -234,38 +242,38 @@ namespace GtfsProvider.RedisStorage
             });
         }
 
-        public async Task<IReadOnlyCollection<Vehicle>> GetVehiclesByUniqueId(List<long> vehicleIds, VehicleType type)
+        public async Task<IReadOnlyCollection<Vehicle>> GetVehiclesByUniqueId(List<long> vehicleIds, VehicleType type, CancellationToken cancellationToken)
         {
-            var vehicles = await RedisServices.GetCollection<StoreVehicle>();
-            var results = await vehicles.FindByIdsAsync(vehicleIds.Select(i => IdGenerator.Vehicle(_city, type, i)));
+            var vehicles = await RedisServices.GetCollection<StoreVehicle>(cancellationToken);
+            var results = await vehicles.FindByIdsAsync(vehicleIds.Select(i => IdGenerator.Vehicle(_city, type, i))).WaitAsync(cancellationToken);
             return results.Values.Where(v => v != null).Select(v => v!.ToAppModel(_modelCache)).ToList();
         }
 
-        public async Task RemoveStopGroups(IEnumerable<string> groupIds)
+        public async Task RemoveStopGroups(IEnumerable<string> groupIds, CancellationToken cancellationToken)
         {
             foreach (var key in groupIds.Select(i => $"{IdGenerator.StopGroupPrefix}:{IdGenerator.StopGroup(_city, i)}"))
-                await RedisServices.ConnectionProvider.Connection.UnlinkAsync(key);
+                await RedisServices.ConnectionProvider.Connection.UnlinkAsync(key).WaitAsync(cancellationToken);
 
             foreach (var id in groupIds)
-                _stopGroups.TryRemove(id, out BaseStop _);
+                _stopGroups.TryRemove(id, out BaseStop? _);
         }
 
-        public async Task RemoveStops(IEnumerable<string> gtfsIds)
+        public async Task RemoveStops(IEnumerable<string> gtfsIds, CancellationToken cancellationToken)
         {
             foreach (var key in gtfsIds.Select(i => $"{IdGenerator.StopPrefix}:{IdGenerator.Stop(_city, i)}"))
-                await RedisServices.ConnectionProvider.Connection.UnlinkAsync(key);
+                await RedisServices.ConnectionProvider.Connection.UnlinkAsync(key).WaitAsync(cancellationToken);
         }
 
-        public async Task MarkSyncDone()
+        public async Task MarkSyncDone(CancellationToken cancellationToken)
         {
-            var groups = (await GetAllStopGroups()).ToDictionary(g => g.GroupId);
+            var groups = (await GetAllStopGroups(cancellationToken)).ToDictionary(g => g.GroupId);
             var newKeys = groups.Keys.ToHashSet();
             var oldKeys = _stopGroups.Keys.ToHashSet();
             var toRemove = oldKeys.Except(newKeys);
 
             foreach (var key in toRemove)
             {
-                _stopGroups.Remove(key, out BaseStop _);
+                _stopGroups.Remove(key, out BaseStop? _);
             }
 
             foreach (var key in groups.Keys)

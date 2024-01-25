@@ -41,11 +41,9 @@ namespace GtfsProvider.CityClient.Krakow
         private Dictionary<long, List<TTSSCleanVehicle>> ttssTrips = new();
         private Dictionary<long, List<GTFSCleanVehicle>> gtfsTrips = new();
         private Dictionary<string, TTSSCleanVehicle> ttssVehicleToTrip = new();
-        private List<KokonVehicle> kokonVehicles;
-        private List<KokonVehicleCompletePositionResponseModel> kokonPositions;
+        private List<KokonVehicleCompletePositionResponseModel> kokonPositions = new();
         private readonly KokonClient _kokonClient;
         private readonly IKrakowTTSSClient _tttssClient;
-        private readonly Guid _builderGuid;
 
         public VehicleDbBuilder(
             IFileStorage fileStorage,
@@ -61,19 +59,17 @@ namespace GtfsProvider.CityClient.Krakow
             _logger = logger;
             _kokonClient = kokonClient;
             _tttssClient = tttssClient;
-            _builderGuid = Guid.NewGuid();
         }
 
-        public async Task<bool> Build(VehicleType type,
-            string positionsFileName)
+        public async Task<bool> Build(VehicleType type, string positionsFileName, CancellationToken cancellationToken)
         {
-            var matchRulesFetchSuccess = await BuildMatchRules(type);
+            var matchRulesFetchSuccess = await BuildMatchRules(type, cancellationToken);
             if (!matchRulesFetchSuccess)
                 return false;
 
-            var kokonDataTask = LoadKokonData();
-            var ttssDataTask = LoadTTSSData(type);
-            var gtfsDataTask = LoadGTFSData(positionsFileName);
+            var kokonDataTask = LoadKokonData(cancellationToken);
+            var ttssDataTask = LoadTTSSData(type, cancellationToken);
+            var gtfsDataTask = LoadGTFSData(positionsFileName, cancellationToken);
             await Task.WhenAll(kokonDataTask, ttssDataTask, gtfsDataTask);
 
             var offset = FindBestOffset();
@@ -183,7 +179,7 @@ namespace GtfsProvider.CityClient.Krakow
                 .Select(v => v.vehicle.UniqueId - (v.vehicle.GtfsId * 2) - 2)
                 .First();
 
-            var oldVehicles = await _storage.GetAllVehicles();
+            var oldVehicles = await _storage.GetAllVehicles(cancellationToken);
             foreach (var v in oldVehicles.Where(ov => ov.Model.Type == type))
             {
                 if (!byTtssId.ContainsKey(v.UniqueId) && !byGtfsId.ContainsKey(v.GtfsId))
@@ -388,7 +384,7 @@ namespace GtfsProvider.CityClient.Krakow
                     match.vehicle.Model = new VehicleModel { Type = type };
                 }
 
-                var addOrUpdateResult = await _storage.AddOrUpdateVehicle(match.vehicle, existingSideNos);
+                var addOrUpdateResult = await _storage.AddOrUpdateVehicle(match.vehicle, existingSideNos, cancellationToken);
                 if (addOrUpdateResult == AddUpdateResult.Updated)
                     updated++;
                 else if (addOrUpdateResult == AddUpdateResult.Added)
@@ -409,14 +405,14 @@ namespace GtfsProvider.CityClient.Krakow
             matchedSingle.Add(v);
         }
 
-        private async Task LoadKokonData()
+        private async Task LoadKokonData(CancellationToken cancellationToken)
         {
-            kokonPositions = await _kokonClient.GetCompleteVehsPos();
+            kokonPositions = await _kokonClient.GetCompleteVehsPos(cancellationToken);
         }
 
-        private async Task<bool> LoadTTSSData(VehicleType type)
+        private async Task<bool> LoadTTSSData(VehicleType type, CancellationToken cancellationToken)
         {
-            var vehiclesInfo = await _tttssClient.GetVehiclesInfo(type);
+            var vehiclesInfo = await _tttssClient.GetVehiclesInfo(type, cancellationToken);
             if (vehiclesInfo == null)
                 return false;
 
@@ -437,7 +433,7 @@ namespace GtfsProvider.CityClient.Krakow
                     Id = long.Parse(v.Id),
                     Line = name[0].Trim(),
                     Direction = name.Length > 1 ? name[1].Trim() : string.Empty,
-                    Coords = CoordsFactory.FromTTSS(v.Latitude.Value, v.Longitude.Value)
+                    Coords = CoordsFactory.FromTTSS(v.Latitude.Value, v.Longitude.Value) ?? Coords.Zero
                 };
 
                 ttssTrips.AddListItem(long.Parse(v.TripId), vehicleEntry);
@@ -447,12 +443,11 @@ namespace GtfsProvider.CityClient.Krakow
             return true;
         }
 
-        private async Task<bool> LoadGTFSData(string positionsFileName)
+        private async Task<bool> LoadGTFSData(string positionsFileName, CancellationToken cancellationToken)
         {
-            using var positionStream = await _fileStorage.LoadFile(City.Krakow, positionsFileName);
+            using var positionStream = await _fileStorage.LoadFile(City.Krakow, positionsFileName, cancellationToken);
             var feedMessage = Serializer.Deserialize<FeedMessage>(positionStream);
             GTFSRefreshTime = (long)feedMessage.Header.Timestamp;
-            FeedEntity tmp = null;
             foreach (var m in feedMessage.Entities)
             {
                 var convertedTripId = ConvertTripId(m.Vehicle.Trip.TripId);
@@ -525,16 +520,16 @@ namespace GtfsProvider.CityClient.Krakow
             return _matchRules.Find(r => r.FromId <= gtfsId && r.ToId >= gtfsId);
         }
 
-        private async Task<bool> BuildMatchRules(VehicleType type)
+        private async Task<bool> BuildMatchRules(VehicleType type, CancellationToken cancellationToken)
         {
             var client = _httpClientFactory.CreateClient($"Downloader_Krakow_MatchRules");
             var matchRulesRawPhp = string.Empty;
             try
             {
                 if (type == VehicleType.Tram)
-                    matchRulesRawPhp = await client.GetStringAsync(tramMatchRulesUrl);
+                    matchRulesRawPhp = await client.GetStringAsync(tramMatchRulesUrl, cancellationToken);
                 if (type == VehicleType.Bus)
-                    matchRulesRawPhp = await client.GetStringAsync(busMatchRulesUrl);
+                    matchRulesRawPhp = await client.GetStringAsync(busMatchRulesUrl, cancellationToken);
             }
             catch (Exception ex)
             {

@@ -26,15 +26,15 @@ namespace GtfsProvider.CityClient.Wroclaw
             _httpClientFactory = httpClientFactory;
         }
 
-        public async Task RefreshIfNeeded()
+        public async Task RefreshIfNeeded(CancellationToken cancellationToken)
         {
-            await DownloadStops();
-            await DownloadVehicles();
+            await DownloadStops(cancellationToken);
+            await DownloadVehicles(cancellationToken);
         }
 
-        private async Task DownloadStops()
+        private async Task DownloadStops(CancellationToken cancellationToken)
         {
-            var stops = await _iMPK.GetStops();
+            var stops = await _iMPK.GetStops(cancellationToken);
             if (stops == null)
                 return;
 
@@ -61,32 +61,32 @@ namespace GtfsProvider.CityClient.Wroclaw
                 }));
             }
 
-            var existingPosts = (await _dataStorage.GetAllStopIds()).ToHashSet();
-            var existingGroups = (await _dataStorage.GetAllStopGroupIds()).ToHashSet();
+            var existingPosts = (await _dataStorage.GetAllStopIds(cancellationToken)).ToHashSet();
+            var existingGroups = (await _dataStorage.GetAllStopGroupIds(cancellationToken)).ToHashSet();
 
             var stopsToAdd = stopPosts.ExceptBy(existingPosts, s => s.GtfsId);
             var stopsToRemove = existingPosts.Except(stopPosts.Select(s => s.GtfsId).ToHashSet());
 
-            await _dataStorage.RemoveStops(stopsToRemove);
-            await _dataStorage.AddStops(stopsToAdd);
+            await _dataStorage.RemoveStops(stopsToRemove, cancellationToken);
+            await _dataStorage.AddStops(stopsToAdd, cancellationToken);
 
             var groupsToAdd = stopGroups.ExceptBy(existingGroups, s => s.GroupId);
             var groupsToRemove = existingGroups.Except(stopGroups.Select(s => s.GroupId).ToHashSet());
 
-            await _dataStorage.RemoveStopGroups(groupsToRemove);
-            await _dataStorage.AddStopGroups(groupsToAdd);
+            await _dataStorage.RemoveStopGroups(groupsToRemove, cancellationToken);
+            await _dataStorage.AddStopGroups(groupsToAdd, cancellationToken);
 
-            await _dataStorage.MarkSyncDone();
+            await _dataStorage.MarkSyncDone(cancellationToken);
         }
 
-        private async Task DownloadVehicles()
+        private async Task DownloadVehicles(CancellationToken cancellationToken)
         {
             var modelDict = new Dictionary<string, VehicleModel>();
-            var vehicles = await _iMPK.GetVehicles();
+            var vehicles = await _iMPK.GetVehicles(cancellationToken);
             if (vehicles == null)
                 return;
 
-            var oldVehicles = (await _dataStorage.GetAllVehicles()).ToDictionary(v => v.SideNo);
+            var oldVehicles = (await _dataStorage.GetAllVehicles(cancellationToken)).ToDictionary(v => v.SideNo);
 
             foreach (var vehicle in vehicles)
             {
@@ -113,7 +113,7 @@ namespace GtfsProvider.CityClient.Wroclaw
                     veh.Model = model;
                 }
 
-                await _dataStorage.AddOrUpdateVehicle(veh, oldVehicles);
+                await _dataStorage.AddOrUpdateVehicle(veh, oldVehicles, cancellationToken);
             }
         }
 

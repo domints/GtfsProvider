@@ -49,27 +49,27 @@ namespace GtfsProvider.CityClient.Krakow
             _logger = logger;
         }
 
-        public async Task RefreshIfNeeded()
+        public async Task RefreshIfNeeded(CancellationToken cancellationToken)
         {
             var httpClient = _httpClientFactory.CreateClient($"Downloader_{City}");
-            var contents = await httpClient.GetStringAsync(_baseUrl);
+            var contents = await httpClient.GetStringAsync(_baseUrl, cancellationToken);
             var fileList = _fileRegex.Matches(contents).Select(m => new { Name = m.Groups[1].Value, Time = DateTime.Parse(m.Groups[3].Value) }).ToList();
 
             foreach (var file in fileList)
             {
-                var lastFileUpdate = await _fileStorage.GetFileTime(City, file.Name);
+                var lastFileUpdate = await _fileStorage.GetFileTime(City, file.Name, cancellationToken);
                 if (lastFileUpdate == null || lastFileUpdate.Value < file.Time)
                 {
-                    using (var fileStream = await httpClient.GetStreamAsync($"{_baseUrl}{file.Name}"))
+                    using (var fileStream = await httpClient.GetStreamAsync($"{_baseUrl}{file.Name}", cancellationToken))
                     {
-                        await _fileStorage.StoreFile(City, file.Name, fileStream);
+                        await _fileStorage.StoreFile(City, file.Name, fileStream, cancellationToken);
                     }
                 }
             }
 
             try
             {
-                await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus);
+                await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -78,7 +78,7 @@ namespace GtfsProvider.CityClient.Krakow
 
             try
             {
-                await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram);
+                await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -88,11 +88,11 @@ namespace GtfsProvider.CityClient.Krakow
             List<BaseStop> busStops = new();
             List<BaseStop> tramStops = new();
 
-            if ((await _fileStorage.GetFileTime(City, _gtfZipBus)).HasValue)
-                busStops = await ParseGtfsZip(_gtfZipBus, VehicleType.Bus);
+            if ((await _fileStorage.GetFileTime(City, _gtfZipBus, cancellationToken)).HasValue)
+                busStops = await ParseGtfsZip(_gtfZipBus, VehicleType.Bus, cancellationToken);
 
-            if ((await _fileStorage.GetFileTime(City, _gtfZipTram)).HasValue)
-                tramStops = await ParseGtfsZip(_gtfZipTram, VehicleType.Tram);
+            if ((await _fileStorage.GetFileTime(City, _gtfZipTram, cancellationToken)).HasValue)
+                tramStops = await ParseGtfsZip(_gtfZipTram, VehicleType.Tram, cancellationToken);
 
             var newStopGroups = busStops.Concat(tramStops).GroupBy(g => g.GroupId)
                 .Select(g => new BaseStop
@@ -102,22 +102,22 @@ namespace GtfsProvider.CityClient.Krakow
                     Type = g.Aggregate(VehicleType.None, (curr, stop) => curr | stop.Type)
                 }).ToDictionary(k => k.GroupId);
 
-            var previousStopGroups = (await _dataStorage.GetAllStopGroupIds()).ToHashSet();
+            var previousStopGroups = (await _dataStorage.GetAllStopGroupIds(cancellationToken)).ToHashSet();
 
             var toRemove = previousStopGroups.ExceptIn(newStopGroups.Keys.ToHashSet());
             var toAdd = newStopGroups.ExceptIn(previousStopGroups);
 
-            await _dataStorage.RemoveStopGroups(toRemove);
-            await _dataStorage.AddStopGroups(toAdd);
+            await _dataStorage.RemoveStopGroups(toRemove, cancellationToken);
+            await _dataStorage.AddStopGroups(toAdd, cancellationToken);
 
-            await _dataStorage.MarkSyncDone();
+            await _dataStorage.MarkSyncDone(cancellationToken);
         }
 
-        private async Task<List<BaseStop>> ParseGtfsZip(string name, VehicleType type)
+        private async Task<List<BaseStop>> ParseGtfsZip(string name, VehicleType type, CancellationToken cancellationToken)
         {
             try
             {
-                using (ZipFile zip = new ZipFile(await _fileStorage.LoadFile(City, name)))
+                using (ZipFile zip = new ZipFile(await _fileStorage.LoadFile(City, name, cancellationToken)))
                 {
                     var stopsZipEntry = zip.GetEntry("stops.txt");
                     var stops = new Dictionary<string, Stop>();
@@ -127,6 +127,7 @@ namespace GtfsProvider.CityClient.Krakow
                     {
                         while (await csv.ReadAsync())
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             var entry = csv.GetRecord<StopEntry>();
                             stops.Add(entry.Id, new Stop
                             {
@@ -140,14 +141,14 @@ namespace GtfsProvider.CityClient.Krakow
                         }
                     }
 
-                    var existingIds = (await _dataStorage.GetStopIdsByType(type))
+                    var existingIds = (await _dataStorage.GetStopIdsByType(type, cancellationToken))
                         .ToHashSet();
 
                     var toRemove = existingIds.ExceptIn(stops.Keys.ToHashSet());
                     var toAdd = stops.ExceptIn(existingIds);
 
-                    await _dataStorage.RemoveStops(toRemove);
-                    await _dataStorage.AddStops(toAdd);
+                    await _dataStorage.RemoveStops(toRemove, cancellationToken);
+                    await _dataStorage.AddStops(toAdd, cancellationToken);
 
                     var stopGroups = stops.GroupBy(s => s.Value.GroupId)
                         .Select(g => new BaseStop { GroupId = g.Key, Name = g.First().Value.Name, Type = type });
@@ -157,7 +158,7 @@ namespace GtfsProvider.CityClient.Krakow
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load zip file {fileName} for city {city}. Ramoving that file.", name, City);
-                await _fileStorage.RemoveFile(City, name);
+                await _fileStorage.RemoveFile(City, name, cancellationToken);
                 throw;
             }
         }

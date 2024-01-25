@@ -16,20 +16,20 @@ namespace GtfsProvider.Services
             _dataStorage = dataStorage;
         }
 
-        public Task<List<Stop>> AllStops(City city)
+        public Task<List<Stop>> AllStops(City city, CancellationToken cancellationToken)
         {
             var store = _dataStorage[city];
 
-            return store.GetAllStops();
+            return store.GetAllStops(cancellationToken);
         }
 
-        public Task<List<BaseStop>> Autocomplete(City city, string query, int? limit)
+        public Task<List<BaseStop>> Autocomplete(City city, string query, int? limit, CancellationToken cancellationToken)
         {
             if(query.Length < 3)
                 return Task.FromResult(Enumerable.Empty<BaseStop>().ToList());
             var store = _dataStorage[city];
 
-            return store.FindStops(query, limit);
+            return store.FindStops(query, limit, cancellationToken);
         }
     }
 }

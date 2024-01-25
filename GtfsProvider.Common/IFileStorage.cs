@@ -8,9 +8,9 @@ namespace GtfsProvider.Common
 {
     public interface IFileStorage
     {
-        Task<DateTime?> GetFileTime(City city, string name);
-        Task StoreFile(City city, string name, Stream stream);
-        Task<Stream> LoadFile(City city, string name);
-        Task RemoveFile(City city, string name);
+        Task<DateTime?> GetFileTime(City city, string name, CancellationToken cancellationToken);
+        Task StoreFile(City city, string name, Stream stream, CancellationToken cancellationToken);
+        Task<Stream> LoadFile(City city, string name, CancellationToken cancellationToken);
+        Task RemoveFile(City city, string name, CancellationToken cancellationToken);
     }
 }

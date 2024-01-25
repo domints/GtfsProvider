@@ -12,18 +12,18 @@ namespace GtfsProvider.Api.Endpoints
     {
         public static IEndpointRouteBuilder MapDeparturesEndpoints(this IEndpointRouteBuilder app)
         {
-            app.MapGet("/departures/stop/{groupId}", (ILiveDataService liveDataService, string groupId, CaseInsensitiveBind<City>? city, DateTime? startTime, int? timeFrame) =>
+            app.MapGet("/departures/stop/{groupId}", (HttpContext cx, ILiveDataService liveDataService, string groupId, CaseInsensitiveBind<City>? city, DateTime? startTime, int? timeFrame) =>
             {
                 var resolvedCity = city ?? City.Krakow;
 
-                return liveDataService.GetStopDepartures(resolvedCity, groupId, startTime, timeFrame);
+                return liveDataService.GetStopDepartures(resolvedCity, groupId, startTime, timeFrame, cx.RequestAborted);
             });
 
-            app.MapGet("/departures/trip/{tripId}", (ILiveDataService liveDataService, string tripId, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> vehicleType) =>
+            app.MapGet("/departures/trip/{tripId}", (HttpContext cx, ILiveDataService liveDataService, string tripId, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> vehicleType) =>
             {
                 var resolvedCity = city ?? City.Krakow;
 
-                return liveDataService.GetTripDepartures(resolvedCity, tripId, vehicleType);
+                return liveDataService.GetTripDepartures(resolvedCity, tripId, vehicleType, cx.RequestAborted);
             });
             return app;
         }

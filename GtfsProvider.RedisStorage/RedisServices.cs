@@ -20,9 +20,10 @@ namespace GtfsProvider.RedisStorage
             return services;
         }
 
-        public static async Task<IRedisCollection<T>> GetCollection<T>()
+        public static async Task<IRedisCollection<T>> GetCollection<T>(CancellationToken cancellationToken)
             where T : notnull, IDocument
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (_connProvider == null)
             {
                 _connProvider = new RedisConnectionProvider("redis://localhost:6379");

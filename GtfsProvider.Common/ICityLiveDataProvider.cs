@@ -10,8 +10,8 @@ namespace GtfsProvider.Common
     public interface ICityLiveDataProvider
     {
         City City { get; }
-        Task<List<VehicleLiveInfo>> GetLivePositions();
-        Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame);
-        Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType);
+        Task<List<VehicleLiveInfo>> GetLivePositions(CancellationToken cancellationToken);
+        Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken);
+        Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType, CancellationToken cancellationToken);
     }
 }

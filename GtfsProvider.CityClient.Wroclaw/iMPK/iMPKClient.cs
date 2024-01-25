@@ -17,22 +17,22 @@ namespace GtfsProvider.CityClient.Wroclaw.iMPK
             _httpClientFactory = httpClientFactory;
         }
 
-        public async Task<List<VehicleInfo>?> GetVehicles()
+        public async Task<List<VehicleInfo>?> GetVehicles(CancellationToken cancellationToken)
         {
             var client = _httpClientFactory.CreateClient(Consts.iMPK_HttpClient_Name);
-            return await client.GetJson<GetAllVehiclesRequest, List<VehicleInfo>>(APIUrl);
+            return await client.GetJson<GetAllVehiclesRequest, List<VehicleInfo>>(APIUrl, cancellationToken);
         }
 
-        public async Task<List<Stop>?> GetStops()
+        public async Task<List<Stop>?> GetStops(CancellationToken cancellationToken)
         {
             var client = _httpClientFactory.CreateClient(Consts.iMPK_HttpClient_Name);
-            return await client.GetJson<GetAllPostsRequest, List<Stop>>(APIUrl);
+            return await client.GetJson<GetAllPostsRequest, List<Stop>>(APIUrl, cancellationToken);
         }
 
-        public async Task<List<PostGroupDeparture>?> GetStopGroupInfo(string groupId)
+        public async Task<List<PostGroupDeparture>?> GetStopGroupInfo(string groupId, CancellationToken cancellationToken)
         {
             var client = _httpClientFactory.CreateClient(Consts.iMPK_HttpClient_Name);
-            return await client.GetJson<GetPostGroupInfoRequest, List<PostGroupDeparture>>(APIUrl, new GetPostGroupInfoRequest { GroupId = groupId });
+            return await client.GetJson<GetPostGroupInfoRequest, List<PostGroupDeparture>>(APIUrl, new GetPostGroupInfoRequest { GroupId = groupId }, cancellationToken);
         }
     }
 }

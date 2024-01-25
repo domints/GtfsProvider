@@ -35,7 +35,7 @@ namespace GtfsProvider.Api
                     try
                     {
                         _logger.LogInformation("Downloading data for {city}", downloader.City);
-                        await downloader.RefreshIfNeeded();
+                        await downloader.RefreshIfNeeded(stoppingToken);
                         _logger.LogInformation("Done downloading for {city}", downloader.City);
                     }
                     catch (Exception ex)

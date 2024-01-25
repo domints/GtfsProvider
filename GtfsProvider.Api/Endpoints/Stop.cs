@@ -12,19 +12,19 @@ namespace GtfsProvider.Api.Endpoints
     {
         public static IEndpointRouteBuilder MapStopEndpoints(this IEndpointRouteBuilder app)
         {
-            app.MapGet("/autocomplete", (IStopService stopService, CaseInsensitiveBind<City>? city, string query, int? maxItems) =>
+            app.MapGet("/autocomplete", (HttpContext cx, IStopService stopService, CaseInsensitiveBind<City>? city, string query, int? maxItems) =>
             {
                 var resolvedCity = city ?? City.Krakow;
                 var itemLimit = maxItems ?? 10;
 
-                return stopService.Autocomplete(resolvedCity, query, itemLimit);
+                return stopService.Autocomplete(resolvedCity, query, itemLimit, cx.RequestAborted);
             });
 
-            app.MapGet("/stops", (IStopService stopService, CaseInsensitiveBind<City>? city) =>
+            app.MapGet("/stops", (HttpContext cx, IStopService stopService, CaseInsensitiveBind<City>? city) =>
             {
                 var resolvedCity = city ?? City.Krakow;
 
-                return stopService.AllStops(resolvedCity);
+                return stopService.AllStops(resolvedCity, cx.RequestAborted);
             });
 
             return app;

@@ -11,6 +11,6 @@ namespace GtfsProvider.CityClient.Krakow.Kokon
     {
         [JsonProperty("veh_no")]
         [JsonPropertyName("veh_no")]
-        public string SideNo { get; set; }
+        public string SideNo { get; set; } = string.Empty;
     }
 }

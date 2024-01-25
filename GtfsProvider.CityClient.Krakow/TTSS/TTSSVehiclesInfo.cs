@@ -13,6 +13,6 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
         public long LastUpdate { get; set; }
 
         [JsonProperty("vehicles")]
-        public IList<TTSSVehicle> Vehicles { get; set; }
+        public IList<TTSSVehicle> Vehicles { get; set; } = new List<TTSSVehicle>();
     }
 }

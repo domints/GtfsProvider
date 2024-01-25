@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.Tests", "GtfsP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.RedisStorage", "GtfsProvider.RedisStorage\GtfsProvider.RedisStorage.csproj", "{E06AD38A-ECFC-4AAF-81E1-893F2B602C21}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GtfsProvider.CityClient.Wroclaw", "GtfsProvider.CityClient.Wroclaw\GtfsProvider.CityClient.Wroclaw.csproj", "{A7F25E2B-BED4-43CF-8264-3B91C99ED12D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,5 +60,9 @@ Global
 		{1E85BD48-73DD-41F7-803B-99647228277F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E85BD48-73DD-41F7-803B-99647228277F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E85BD48-73DD-41F7-803B-99647228277F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7F25E2B-BED4-43CF-8264-3B91C99ED12D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7F25E2B-BED4-43CF-8264-3B91C99ED12D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7F25E2B-BED4-43CF-8264-3B91C99ED12D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7F25E2B-BED4-43CF-8264-3B91C99ED12D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

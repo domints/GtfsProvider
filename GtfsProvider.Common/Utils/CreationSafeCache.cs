@@ -36,8 +36,15 @@ namespace GtfsProvider.Common.Utils
             {
                 var sem = GetSemaphoreForKey(key);
                 await sem.WaitAsync();
-                var value = await factory(cacheEntry);
-                sem.Release();
+                T? value;
+                try
+                {
+                    value = await factory(cacheEntry);
+                }
+                finally
+                {
+                    sem.Release();
+                }
                 return value;
             });
         }

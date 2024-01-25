@@ -29,7 +29,7 @@ namespace GtfsProvider.MemoryStorage
             _city = city;
         }
 
-        public Task<List<BaseStop>> FindStops(string pattern, int? limit)
+        public Task<List<BaseStop>> FindStops(string pattern, int? limit, CancellationToken _)
         {
             var query = _stopGroups.Values
                 .Where(s => s.Name.Matches(pattern));
@@ -40,24 +40,24 @@ namespace GtfsProvider.MemoryStorage
             return Task.FromResult(result);
         }
 
-        public Task<List<Stop>> GetAllStops() => Task.FromResult(_stops.Values.ToList());
+        public Task<List<Stop>> GetAllStops(CancellationToken _) => Task.FromResult(_stops.Values.ToList());
 
-        public Task<List<string>> GetAllStopIds() => Task.FromResult(_stops.Values.Select(s => s.GtfsId).ToList());
+        public Task<List<string>> GetAllStopIds(CancellationToken _) => Task.FromResult(_stops.Values.Select(s => s.GtfsId).ToList());
 
-        public Task<List<string>> GetStopIdsByType(VehicleType type)
+        public Task<List<string>> GetStopIdsByType(VehicleType type, CancellationToken _)
         {
             return Task.FromResult(_stops.Values.Where(s => s.Type == type).Select(s => s.GroupId).ToList());
         }
 
-        public Task RemoveStops(IEnumerable<string> gtfsIds)
+        public Task RemoveStops(IEnumerable<string> gtfsIds, CancellationToken _)
         {
             foreach (var id in gtfsIds)
-                _stops.TryRemove(id, out Stop _);
+                _stops.TryRemove(id, out Stop? _);
 
             return Task.CompletedTask;
         }
 
-        public Task AddStops(IEnumerable<Stop> stops)
+        public Task AddStops(IEnumerable<Stop> stops, CancellationToken _)
         {
             foreach (var stop in stops)
                 _stops.AddOrUpdate(stop.GtfsId, stop, (_, _) => stop);
@@ -65,7 +65,7 @@ namespace GtfsProvider.MemoryStorage
             return Task.CompletedTask;
         }
 
-        public Task AddStopGroups(IEnumerable<BaseStop> stopGroups)
+        public Task AddStopGroups(IEnumerable<BaseStop> stopGroups, CancellationToken _)
         {
             foreach (var group in stopGroups)
                 _stopGroups.AddOrUpdate(group.GroupId, group, (_, _) => group);
@@ -73,15 +73,15 @@ namespace GtfsProvider.MemoryStorage
             return Task.CompletedTask;
         }
 
-        public Task RemoveStopGroups(IEnumerable<string> groupIds)
+        public Task RemoveStopGroups(IEnumerable<string> groupIds, CancellationToken _)
         {
             foreach (var id in groupIds)
-                _stopGroups.TryRemove(id, out BaseStop _);
+                _stopGroups.TryRemove(id, out BaseStop? _);
 
             return Task.CompletedTask;
         }
 
-        public Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle, Dictionary<string, Vehicle> existingSideNos)
+        public Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle, Dictionary<string, Vehicle> existingSideNos, CancellationToken _)
         {
             var result = AddUpdateResult.Added;
             var existingVehicle = _vehiclesBySideNo.GetValueOrDefault(vehicle.SideNo);
@@ -113,32 +113,32 @@ namespace GtfsProvider.MemoryStorage
             return Task.FromResult(result);
         }
 
-        public Task<Vehicle?> GetVehicleByGtfsId(long vehicleId, VehicleType type)
+        public Task<Vehicle?> GetVehicleByGtfsId(long vehicleId, VehicleType type, CancellationToken _)
         {
             return Task.FromResult(_vehiclesByGtfs.GetValueOrDefault((vehicleId, type)));
         }
 
-        public virtual Task<Vehicle?> GetVehicleByUniqueId(long vehicleId, VehicleType type)
+        public virtual Task<Vehicle?> GetVehicleByUniqueId(long vehicleId, VehicleType type, CancellationToken _)
         {
             return Task.FromResult(_vehiclesByUniqueId.GetValueOrDefault((vehicleId, type)));
         }
 
-        public Task<Vehicle?> GetVehicleBySideNo(string sideNo)
+        public Task<Vehicle?> GetVehicleBySideNo(string sideNo, CancellationToken _)
         {
             return Task.FromResult(_vehiclesBySideNo.GetValueOrDefault(sideNo));
         }
 
-        public Task<IReadOnlyCollection<Vehicle>> GetAllVehicles()
+        public Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(CancellationToken _)
         {
             return Task.FromResult(_vehiclesByGtfs.Values.AsReadOnly());
         }
 
-        public Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type)
+        public Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type, CancellationToken _)
         {
             return Task.FromResult((IReadOnlyCollection<Vehicle>)_vehiclesByGtfs.Values.Where(v => type == VehicleType.None || v.Model.Type == type).ToList());
         }
 
-        public Task<IReadOnlyCollection<Vehicle>> GetVehiclesByUniqueId(List<long> vehicleIds, VehicleType type)
+        public Task<IReadOnlyCollection<Vehicle>> GetVehiclesByUniqueId(List<long> vehicleIds, VehicleType type, CancellationToken _)
         {
             var results = new List<Vehicle>();
 
@@ -152,17 +152,17 @@ namespace GtfsProvider.MemoryStorage
             return Task.FromResult((IReadOnlyCollection<Vehicle>)results);
         }
 
-        public Task<IReadOnlyCollection<string>> GetAllStopGroupIds()
+        public Task<IReadOnlyCollection<string>> GetAllStopGroupIds(CancellationToken _)
         {
             return Task.FromResult(_stopGroups.Keys.AsReadOnly());
         }
 
-        public Task<Stop?> GetStopById(string stopId)
+        public Task<Stop?> GetStopById(string stopId, CancellationToken _)
         {
             return Task.FromResult(_stops.GetValueOrDefault(stopId));
         }
 
-        public Task MarkSyncDone()
+        public Task MarkSyncDone(CancellationToken _)
         {
             return Task.CompletedTask;
         }

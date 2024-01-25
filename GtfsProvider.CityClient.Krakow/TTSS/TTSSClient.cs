@@ -13,9 +13,9 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
 {
     public interface IKrakowTTSSClient
     {
-        Task<TTSSVehiclesInfo?> GetVehiclesInfo(VehicleType type);
-        Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame);
-        Task<TripInfo?> GetTripInfo(VehicleType type, string tripId);
+        Task<TTSSVehiclesInfo?> GetVehiclesInfo(VehicleType type, CancellationToken cancellationToken);
+        Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken);
+        Task<TripInfo?> GetTripInfo(VehicleType type, string tripId, CancellationToken cancellationToken);
     }
 
     public class KrakowTTSSClient : IKrakowTTSSClient
@@ -39,7 +39,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
             _cache = cache;
         }
 
-        public async Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame)
+        public async Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
         {
             return await _cache.GetOrCreateSafeAsync($"Downloader_Krakow_TTSSClient_GetStopInfo_{type}_{groupId}_{startTime}_{timeFrame}", async cacheEntry =>
             {
@@ -63,11 +63,11 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
                     TimeFrame = timeFrame
                 };
 
-                return await client.PostFormToGetJson<PassageRequest, StopInfo>(stopPassagesPath, request);
+                return await client.PostFormToGetJson<PassageRequest, StopInfo>(stopPassagesPath, request, cancellationToken);
             });
         }
 
-        public async Task<TripInfo?> GetTripInfo(VehicleType type, string tripId)
+        public async Task<TripInfo?> GetTripInfo(VehicleType type, string tripId, CancellationToken cancellationToken)
         {
             return await _cache.GetOrCreateSafeAsync($"Downloader_Krakow_TTSSClient_GetStopInfo_{type}_{tripId}", async cacheEntry =>
             {
@@ -83,11 +83,11 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
                     Language = "pl"
                 };
 
-                return await client.PostFormToGetJson<TripPassageRequest, TripInfo>(tripPassagesPath, request);
+                return await client.PostFormToGetJson<TripPassageRequest, TripInfo>(tripPassagesPath, request, cancellationToken);
             });
         }
 
-        public async Task<TTSSVehiclesInfo?> GetVehiclesInfo(VehicleType type)
+        public async Task<TTSSVehiclesInfo?> GetVehiclesInfo(VehicleType type, CancellationToken cancellationToken)
         {
             return await _cache.GetOrCreateSafeAsync($"Downloader_Krakow_TTSSClient_GetVehiclesInfo_{type}", async cacheEntry =>
             {
@@ -99,7 +99,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
                 var jsonData = string.Empty;
                 try
                 {
-                    jsonData = await client.GetStringAsync(vehiclesListPath);
+                    jsonData = await client.GetStringAsync(vehiclesListPath, cancellationToken);
                 }
                 catch (Exception ex)
                 {

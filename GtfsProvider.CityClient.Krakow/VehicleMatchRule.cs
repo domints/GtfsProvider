@@ -9,7 +9,7 @@ namespace GtfsProvider.CityClient.Krakow
     {
         public int FromId { get; set; }
         public int ToId { get; set; }
-        public string Symbol { get; set; }
-        public string ModelName { get; set; }
+        public string Symbol { get; set; } = string.Empty;
+        public string ModelName { get; set; } = string.Empty;
     }
 }

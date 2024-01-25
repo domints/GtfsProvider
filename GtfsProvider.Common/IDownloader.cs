@@ -10,6 +10,6 @@ namespace GtfsProvider.Common
     public interface IDownloader
     {
         City City { get; }
-        Task RefreshIfNeeded();
+        Task RefreshIfNeeded(CancellationToken cancellationToken);
     }
 }

@@ -23,25 +23,25 @@ namespace GtfsProvider.CityClient.Krakow.Kokon
             _httpClientFactory = httpClientFactory;
         }
 
-        public async Task<List<KokonVehicle>> GetVehicles()
+        public async Task<List<KokonVehicle>> GetVehicles(CancellationToken cancellationToken)
         {
             var client = _httpClientFactory.CreateClient("Downloader_Krakow_Kokon");
-            var vehicles = await client.GetFromJsonAsync<List<KokonVehiclesResponseModel>>(GetVehiclesUrl);
-            return vehicles
+            var vehicles = await client.GetFromJsonAsync<List<KokonVehiclesResponseModel>>(GetVehiclesUrl, cancellationToken);
+            return vehicles?
                 .Where(v => SideNoRx.IsMatch(v.SideNo))
                 .DistinctBy(v => v.SideNo)
                 .Select(v => KokonVehicle.FromSideNo(v.SideNo))
-                .ToList();
+                .ToList() ?? new List<KokonVehicle>();
         }
 
-        public async Task<List<KokonVehicleCompletePositionResponseModel>> GetCompleteVehsPos()
+        public async Task<List<KokonVehicleCompletePositionResponseModel>> GetCompleteVehsPos(CancellationToken cancellationToken)
         {
             var client = _httpClientFactory.CreateClient("Downloader_Krakow_Kokon");
-            return (await client.GetFromJsonAsync<List<KokonVehicleCompletePositionResponseModel>>(GetCompleteVehPos))
+            return (await client.GetFromJsonAsync<List<KokonVehicleCompletePositionResponseModel>>(GetCompleteVehPos, cancellationToken))?
                 .Where(v => SideNoRx.IsMatch(v.SideNo))
                 .DistinctBy(v => v.SideNo)
                 .OrderBy(v => KokonVehicle.FromSideNo(v.SideNo).VehicleNo)
-                .ToList();
+                .ToList() ?? new List<KokonVehicleCompletePositionResponseModel>();
         }
     }
 }

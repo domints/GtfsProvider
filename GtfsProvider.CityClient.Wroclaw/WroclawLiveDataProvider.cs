@@ -17,32 +17,33 @@ namespace GtfsProvider.CityClient.Wroclaw
         public City City => City.Wroclaw;
 
 
-        public WroclawLiveDataProvider(iMPKClient mpkClient,
-            IDataStorage dataStorage)
+        public WroclawLiveDataProvider(iMPKClient mpkClient, IDataStorage dataStorage)
         {
             _mpkClient = mpkClient;
             _dataStorage = dataStorage[City];
         }
 
-        public Task<List<VehicleLiveInfo>> GetLivePositions()
+        public Task<List<VehicleLiveInfo>> GetLivePositions(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
 
-        public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame)
+        public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
         {
-            var departures = await _mpkClient.GetStopGroupInfo(groupId);
+            var departures = await _mpkClient.GetStopGroupInfo(groupId, cancellationToken);
             if (departures == null)
                 return new();
 
             var result = new List<StopDeparture>();
             foreach (var d in departures)
             {
-                var stop = await _dataStorage.GetStopById(d.DirectionStopId);
+                if (d.DirectionStopId == null)
+                    continue;
+                var stop = await _dataStorage.GetStopById(d.DirectionStopId, cancellationToken);
                 result.Add(new StopDeparture
                 {
                     Line = d.Line ?? "-",
-                    Direction = stop?.Name,
+                    Direction = stop?.Name ?? "-",
                     TimeString = d.Time.ToString("HH:mm"),
                     TripId = d.CourseId.ToString()
                 });
@@ -51,7 +52,7 @@ namespace GtfsProvider.CityClient.Wroclaw
             return result;
         }
 
-        public Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType)
+        public Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

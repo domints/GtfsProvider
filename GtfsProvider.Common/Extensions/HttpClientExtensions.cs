@@ -10,7 +10,7 @@ namespace GtfsProvider.Common.Extensions
 {
     public static class HttpClientExtensions
     {
-        public static async Task<TRs?> PostFormToGetJson<TRq, TRs>(this HttpClient client, string url, TRq request)
+        public static async Task<TRs?> PostFormToGetJson<TRq, TRs>(this HttpClient client, string url, TRq request, CancellationToken cancellationToken)
             where TRq : new()
             where TRs : new()
         {
@@ -30,7 +30,7 @@ namespace GtfsProvider.Common.Extensions
                 paramDict.Add(key, value);
             }
 
-            var response = await client.PostAsync(url, new FormUrlEncodedContent(paramDict));
+            var response = await client.PostAsync(url, new FormUrlEncodedContent(paramDict), cancellationToken);
             if (!response.IsSuccessStatusCode)
                 return default;
 
@@ -39,26 +39,26 @@ namespace GtfsProvider.Common.Extensions
             return JsonConvert.DeserializeObject<TRs>(responseContent);
         }
 
-        public static async Task<TRs?> GetJson<TRs>(this HttpClient client, string url)
+        public static async Task<TRs?> GetJson<TRs>(this HttpClient client, string url, CancellationToken cancellationToken)
             where TRs : new()
         {
-            var response = await client.GetAsync(url);
+            var response = await client.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode)
                 return default;
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
             return JsonConvert.DeserializeObject<TRs>(responseContent);
         }
 
-        public static Task<TRs?> GetJson<TRq, TRs>(this HttpClient client, string url)
+        public static Task<TRs?> GetJson<TRq, TRs>(this HttpClient client, string url, CancellationToken cancellationToken)
             where TRq : new()
             where TRs : new()
         {
-            return client.GetJson<TRq, TRs>(url, System.Activator.CreateInstance<TRq>());
+            return client.GetJson<TRq, TRs>(url, System.Activator.CreateInstance<TRq>(), cancellationToken);
         }
 
-        public static async Task<TRs?> GetJson<TRq, TRs>(this HttpClient client, string url, TRq request)
+        public static async Task<TRs?> GetJson<TRq, TRs>(this HttpClient client, string url, TRq request, CancellationToken cancellationToken)
             where TRq : new()
             where TRs : new()
         {
@@ -88,11 +88,11 @@ namespace GtfsProvider.Common.Extensions
                 paramBuilder.AppendFormat("{0}={1}", key, value);
             }
 
-            var response = await client.GetAsync(paramBuilder.ToString());
+            var response = await client.GetAsync(paramBuilder.ToString(), cancellationToken);
             if (!response.IsSuccessStatusCode)
                 return default;
 
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
             return JsonConvert.DeserializeObject<TRs>(responseContent);
         }

@@ -29,36 +29,36 @@ namespace GtfsProvider.CityClient.Krakow
             _logger = logger;
         }
 
-        public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame)
+        public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
         {
-            var busDepartures = await _ttssClient.GetStopInfo(VehicleType.Bus, groupId, startTime, timeFrame);
-            var tramDepartures = await _ttssClient.GetStopInfo(VehicleType.Tram, groupId, startTime, timeFrame);
+            var busDepartures = await _ttssClient.GetStopInfo(VehicleType.Bus, groupId, startTime, timeFrame, cancellationToken);
+            var tramDepartures = await _ttssClient.GetStopInfo(VehicleType.Tram, groupId, startTime, timeFrame, cancellationToken);
 
             var result = new List<StopDeparture>();
 
             foreach (var departure in busDepartures?.OldPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true, VehicleType.Bus));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true, VehicleType.Bus, cancellationToken));
             }
             foreach (var departure in tramDepartures?.OldPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true, VehicleType.Tram));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: true, VehicleType.Tram, cancellationToken));
             }
             foreach (var departure in busDepartures?.ActualPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false, VehicleType.Bus));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false, VehicleType.Bus, cancellationToken));
             }
             foreach (var departure in tramDepartures?.ActualPassages ?? Enumerable.Empty<StopPassage>())
             {
-                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false, VehicleType.Tram));
+                result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false, VehicleType.Tram, cancellationToken));
             }
 
             return result.OrderByDescending(d => d.IsOld).ThenBy(d => d.RelativeTime).ToList();
         }
 
-        public async Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType)
+        public async Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType, CancellationToken cancellationToken)
         {
-            var departures = await _ttssClient.GetTripInfo(vehicleType, tripId);
+            var departures = await _ttssClient.GetTripInfo(vehicleType, tripId, cancellationToken);
             if (departures == null)
                 return new TripDepartures();
             return new TripDepartures
@@ -78,12 +78,12 @@ namespace GtfsProvider.CityClient.Krakow
             };
         }
 
-        public async Task<List<VehicleLiveInfo>> GetLivePositions()
+        public async Task<List<VehicleLiveInfo>> GetLivePositions(CancellationToken cancellationToken)
         {
             TTSSVehiclesInfo? busInfo = null;
             try
             {
-                busInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Bus);
+                busInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Bus, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -93,7 +93,7 @@ namespace GtfsProvider.CityClient.Krakow
             TTSSVehiclesInfo? tramInfo = null;
             try
             {
-                tramInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Tram);
+                tramInfo = await _ttssClient.GetVehiclesInfo(VehicleType.Tram, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -134,16 +134,16 @@ namespace GtfsProvider.CityClient.Krakow
                 TimeString = passage.ActualTime ?? passage.PlannedTime ?? "--:--",
                 StopId = passage?.Stop?.ShortId,
                 StopName = passage?.Stop?.Name,
-                SeqNumber = passage.SequenceNo,
+                SeqNumber = passage?.SequenceNo ?? 0,
                 IsOld = isOld,
                 IsStopping = PassageStatusConverter.Convert(passage?.StatusString ?? "PLANNED") == PassageStatus.Stopping
             };
         }
 
-        private async Task<StopDeparture> MapTTSSStopDepartureToCommon(StopPassage passage, bool isOld, VehicleType type)
+        private async Task<StopDeparture> MapTTSSStopDepartureToCommon(StopPassage passage, bool isOld, VehicleType type, CancellationToken cancellationToken)
         {
-            var vehicle = !string.IsNullOrWhiteSpace(passage?.VehicleID) ? (await _dataStorage.GetVehicleByUniqueId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Tram)
-                ?? await _dataStorage.GetVehicleByUniqueId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Bus)) : null;
+            var vehicle = !string.IsNullOrWhiteSpace(passage?.VehicleID) ? (await _dataStorage.GetVehicleByUniqueId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Tram, cancellationToken)
+                ?? await _dataStorage.GetVehicleByUniqueId(long.Parse(passage?.VehicleID ?? "0"), VehicleType.Bus, cancellationToken)) : null;
 
             var status = PassageStatusConverter.Convert(passage?.StatusString ?? "");
             var actualTime = (passage?.ActualTime).ToTimeSpan();
