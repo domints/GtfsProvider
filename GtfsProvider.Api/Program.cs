@@ -10,7 +10,7 @@ builder.Host.UseSerilog(
                 loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
 builder.Services.AddRequestTimeouts(options => {
     options.DefaultPolicy = new RequestTimeoutPolicy {
-        Timeout = TimeSpan.FromMilliseconds(1000)
+        Timeout = TimeSpan.FromMilliseconds(100)
     };
 });
 builder.Services.AddAppServices();
