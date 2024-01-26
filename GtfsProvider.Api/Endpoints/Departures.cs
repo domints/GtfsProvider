@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using GtfsProvider.Api.Binders;
+using GtfsProvider.Api.Configuration;
 using GtfsProvider.Common;
 using GtfsProvider.Common.Enums;
 
@@ -17,7 +18,7 @@ namespace GtfsProvider.Api.Endpoints
                 var resolvedCity = city ?? City.Krakow;
 
                 return liveDataService.GetStopDepartures(resolvedCity, groupId, startTime, timeFrame, cx.RequestAborted);
-            });
+            }).WithRequestTimeout(TimeoutPolicies.DeparturePolicy);
 
             app.MapGet("/departures/trip/{tripId}", (HttpContext cx, ILiveDataService liveDataService, string tripId, CaseInsensitiveBind<City>? city, CaseInsensitiveBind<VehicleType> vehicleType) =>
             {

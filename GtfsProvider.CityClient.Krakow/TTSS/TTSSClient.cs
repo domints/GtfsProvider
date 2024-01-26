@@ -123,6 +123,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
             else if (type == VehicleType.Tram)
             {
                 client.BaseAddress = new Uri(tramHost);
+                client.Timeout = TimeSpan.FromSeconds(1);
             }
             else
             {

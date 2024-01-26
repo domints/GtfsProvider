@@ -28,7 +28,7 @@ namespace GtfsProvider.CityClient.Wroclaw
             throw new NotImplementedException();
         }
 
-        public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
+        public async Task<StopDeparturesResult> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
         {
             var departures = await _mpkClient.GetStopGroupInfo(groupId, cancellationToken);
             if (departures == null)
@@ -49,7 +49,14 @@ namespace GtfsProvider.CityClient.Wroclaw
                 });
             }
 
-            return result;
+            return new StopDeparturesResult
+            {
+                ResultTypes = new Dictionary<VehicleType, DepartureResultType>{
+                    [VehicleType.Tram] = DepartureResultType.Success,
+                    [VehicleType.Bus] = DepartureResultType.Success
+                },
+                Departures = result
+            };
         }
 
         public Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType, CancellationToken cancellationToken)

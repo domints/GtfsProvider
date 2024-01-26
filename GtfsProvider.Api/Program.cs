@@ -1,4 +1,5 @@
 using GtfsProvider.Api;
+using GtfsProvider.Api.Configuration;
 using GtfsProvider.Api.Endpoints;
 using GtfsProvider.Api.Middleware;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -9,9 +10,8 @@ builder.Host.UseSerilog(
             (hostingContext, loggerConfiguration) =>
                 loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration));
 builder.Services.AddRequestTimeouts(options => {
-    options.DefaultPolicy = new RequestTimeoutPolicy {
-        Timeout = TimeSpan.FromMilliseconds(5000)
-    };
+    options.DefaultPolicy = TimeoutPolicies.DefaultPolicyConfiguration;
+    options.AddPolicy(TimeoutPolicies.DeparturePolicy, TimeoutPolicies.DeparturePolicyConfiguration);
 });
 builder.Services.AddAppServices();
 builder.Services.AddHostedService<DownloaderService>();

@@ -25,7 +25,7 @@ namespace GtfsProvider.Services
             return await provider.GetLivePositions(cancellationToken);
         }
 
-        public async Task<List<StopDeparture>> GetStopDepartures(City city, string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
+        public async Task<StopDeparturesResult> GetStopDepartures(City city, string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
         {
             var provider = _liveDataProviders.FirstOrDefault(d => d.City == city);
             if (provider == null)

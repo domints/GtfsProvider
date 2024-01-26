@@ -29,10 +29,32 @@ namespace GtfsProvider.CityClient.Krakow
             _logger = logger;
         }
 
-        public async Task<List<StopDeparture>> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
+        public async Task<StopDeparturesResult> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
         {
-            var busDepartures = await _ttssClient.GetStopInfo(VehicleType.Bus, groupId, startTime, timeFrame, cancellationToken);
-            var tramDepartures = await _ttssClient.GetStopInfo(VehicleType.Tram, groupId, startTime, timeFrame, cancellationToken);
+            StopInfo? busDepartures = null;
+            StopInfo? tramDepartures = null;
+            var resultTypes = new Dictionary<VehicleType, DepartureResultType>
+            {
+                [VehicleType.Tram] = DepartureResultType.Success,
+                [VehicleType.Bus] = DepartureResultType.Success
+            };
+            try 
+            {
+                busDepartures = await _ttssClient.GetStopInfo(VehicleType.Bus, groupId, startTime, timeFrame, cancellationToken);
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                resultTypes[VehicleType.Bus] = DepartureResultType.Failed;
+            }
+
+            try
+            {
+                tramDepartures = await _ttssClient.GetStopInfo(VehicleType.Tram, groupId, startTime, timeFrame, cancellationToken);
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                resultTypes[VehicleType.Tram] = DepartureResultType.Failed;
+            }
 
             var result = new List<StopDeparture>();
 
@@ -53,7 +75,11 @@ namespace GtfsProvider.CityClient.Krakow
                 result.Add(await MapTTSSStopDepartureToCommon(departure, isOld: false, VehicleType.Tram, cancellationToken));
             }
 
-            return result.OrderByDescending(d => d.IsOld).ThenBy(d => d.RelativeTime).ToList();
+            return new StopDeparturesResult
+            {
+                ResultTypes = resultTypes,
+                Departures = result.OrderByDescending(d => d.IsOld).ThenBy(d => d.RelativeTime).ToList()
+            };
         }
 
         public async Task<TripDepartures> GetTripDepartures(string tripId, VehicleType vehicleType, CancellationToken cancellationToken)
