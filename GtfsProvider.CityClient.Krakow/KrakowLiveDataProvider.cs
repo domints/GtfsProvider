@@ -29,31 +29,35 @@ namespace GtfsProvider.CityClient.Krakow
             _logger = logger;
         }
 
-        public async Task<StopDeparturesResult> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
+        public async Task<StopDeparturesResult> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, VehicleType? vehicleType, CancellationToken cancellationToken)
         {
             StopInfo? busDepartures = null;
             StopInfo? tramDepartures = null;
-            var resultTypes = new Dictionary<VehicleType, DepartureResultType>
+            var resultTypes = new Dictionary<VehicleType, DepartureResultType>();
+            if (vehicleType == null || vehicleType == VehicleType.Bus)
             {
-                [VehicleType.Tram] = DepartureResultType.Success,
-                [VehicleType.Bus] = DepartureResultType.Success
-            };
-            try 
-            {
-                busDepartures = await _ttssClient.GetStopInfo(VehicleType.Bus, groupId, startTime, timeFrame, cancellationToken);
-            }
-            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
-            {
-                resultTypes[VehicleType.Bus] = DepartureResultType.Failed;
+                try
+                {
+                    busDepartures = await _ttssClient.GetStopInfo(VehicleType.Bus, groupId, startTime, timeFrame, vehicleType != null, cancellationToken);
+                    resultTypes.Add(VehicleType.Bus, DepartureResultType.Success);
+                }
+                catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+                {
+                    resultTypes.Add(VehicleType.Bus, DepartureResultType.Failed);
+                }
             }
 
-            try
+            if (vehicleType == null || vehicleType == VehicleType.Bus)
             {
-                tramDepartures = await _ttssClient.GetStopInfo(VehicleType.Tram, groupId, startTime, timeFrame, cancellationToken);
-            }
-            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
-            {
-                resultTypes[VehicleType.Tram] = DepartureResultType.Failed;
+                try
+                {
+                    tramDepartures = await _ttssClient.GetStopInfo(VehicleType.Tram, groupId, startTime, timeFrame, vehicleType != null, cancellationToken);
+                    resultTypes.Add(VehicleType.Tram, DepartureResultType.Success);
+                }
+                catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+                {
+                    resultTypes.Add(VehicleType.Tram, DepartureResultType.Failed);
+                }
             }
 
             var result = new List<StopDeparture>();
@@ -115,7 +119,7 @@ namespace GtfsProvider.CityClient.Krakow
             {
                 _logger.LogError(ex, "Failed to download vehicle positions from Bus API.");
             }
-            
+
             TTSSVehiclesInfo? tramInfo = null;
             try
             {

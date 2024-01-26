@@ -28,7 +28,7 @@ namespace GtfsProvider.CityClient.Wroclaw
             throw new NotImplementedException();
         }
 
-        public async Task<StopDeparturesResult> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
+        public async Task<StopDeparturesResult> GetStopDepartures(string groupId, DateTime? startTime, int? timeFrame, VehicleType? vehicleType, CancellationToken cancellationToken)
         {
             var departures = await _mpkClient.GetStopGroupInfo(groupId, cancellationToken);
             if (departures == null)

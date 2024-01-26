@@ -14,7 +14,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
     public interface IKrakowTTSSClient
     {
         Task<TTSSVehiclesInfo?> GetVehiclesInfo(VehicleType type, CancellationToken cancellationToken);
-        Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken);
+        Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame, bool longWait, CancellationToken cancellationToken);
         Task<TripInfo?> GetTripInfo(VehicleType type, string tripId, CancellationToken cancellationToken);
     }
 
@@ -39,7 +39,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
             _cache = cache;
         }
 
-        public async Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
+        public async Task<StopInfo?> GetStopInfo(VehicleType type, string groupId, DateTime? startTime, int? timeFrame, bool longWait, CancellationToken cancellationToken)
         {
             return await _cache.GetOrCreateSafeAsync($"Downloader_Krakow_TTSSClient_GetStopInfo_{type}_{groupId}_{startTime}_{timeFrame}", async cacheEntry =>
             {
@@ -47,6 +47,9 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
                 var client = GetHttpClient(type);
                 if (client == null)
                     return null;
+
+                if (!longWait)
+                    client.Timeout = TimeSpan.FromSeconds(2);
 
                 int? intStartTime = null;
                 if (startTime.HasValue)
@@ -123,7 +126,6 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
             else if (type == VehicleType.Tram)
             {
                 client.BaseAddress = new Uri(tramHost);
-                client.Timeout = TimeSpan.FromSeconds(1);
             }
             else
             {

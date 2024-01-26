@@ -25,13 +25,13 @@ namespace GtfsProvider.Services
             return await provider.GetLivePositions(cancellationToken);
         }
 
-        public async Task<StopDeparturesResult> GetStopDepartures(City city, string groupId, DateTime? startTime, int? timeFrame, CancellationToken cancellationToken)
+        public async Task<StopDeparturesResult> GetStopDepartures(City city, string groupId, DateTime? startTime, int? timeFrame, VehicleType? vehicleType, CancellationToken cancellationToken)
         {
             var provider = _liveDataProviders.FirstOrDefault(d => d.City == city);
             if (provider == null)
                 return new();
 
-            return await provider.GetStopDepartures(groupId, startTime, timeFrame, cancellationToken);
+            return await provider.GetStopDepartures(groupId, startTime, timeFrame, vehicleType, cancellationToken);
         }
 
         public async Task<TripDepartures> GetTripDepartures(City city, string tripId, VehicleType vehicleType, CancellationToken cancellationToken)
