@@ -49,7 +49,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
                     return null;
 
                 if (!longWait)
-                    client.Timeout = TimeSpan.FromSeconds(20);
+                    client.Timeout = TimeSpan.FromSeconds(10);
 
                 int? intStartTime = null;
                 if (startTime.HasValue)
