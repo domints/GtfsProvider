@@ -30,7 +30,7 @@ namespace GtfsProvider.CityClient.Krakow
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VehicleDbBuilder _tramVehicleDbBuilder;
         private readonly VehicleDbBuilder _busVehicleDbBuilder;
-        private readonly Regex _fileRegex = new("<a href=\"([A-z\\._]+)\">([A-z\\._]+)<\\/a>\\s+<\\/td><td align=\"right\">([0-9]{4}-[0-9]{2}-[0-9]{2}\\s[0-9]{2}:[0-9]{2})", RegexOptions.Compiled | RegexOptions.Multiline);
+        private readonly Regex _fileRegex = new("\\(aktualizacja:\\s([0-9\\-\\ \\:]{8,})\\)\\s<a href=\"([A-z\\._\\/]+)\">([A-z\\\\._]+)<\\/a>", RegexOptions.Compiled | RegexOptions.Multiline);
         private readonly ILogger<Downloader> _logger;
 
         public Downloader(
@@ -53,7 +53,7 @@ namespace GtfsProvider.CityClient.Krakow
         {
             var httpClient = _httpClientFactory.CreateClient($"Downloader_{City}");
             var contents = await httpClient.GetStringAsync(_baseUrl, cancellationToken);
-            var fileList = _fileRegex.Matches(contents).Select(m => new { Name = m.Groups[1].Value, Time = DateTime.Parse(m.Groups[3].Value) }).ToList();
+            var fileList = _fileRegex.Matches(contents).Select(m => new { Name = m.Groups[3].Value, Time = DateTime.Parse(m.Groups[1].Value) }).ToList();
 
             foreach (var file in fileList)
             {
