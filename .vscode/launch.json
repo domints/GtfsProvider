@@ -18,7 +18,8 @@
                 "pattern": "\\bInitialized, swagger on:\\s+(https?://\\S+)"
             },
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "DOTNET_EnableAVX": "0"
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"

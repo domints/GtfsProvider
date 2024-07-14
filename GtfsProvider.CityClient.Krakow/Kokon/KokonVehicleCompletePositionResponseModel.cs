@@ -33,6 +33,7 @@ namespace GtfsProvider.CityClient.Krakow.Kokon
         public string Direction { get; set; } = string.Empty;
 
         [JsonPropertyName("veh_ts")]
+        [JsonConverter(typeof(KokonDateTimeConverter))]
         public DateTime VehTs { get; set; }
 
         [JsonPropertyName("next_stop")]
