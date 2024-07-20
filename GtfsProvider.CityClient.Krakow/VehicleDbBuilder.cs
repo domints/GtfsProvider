@@ -450,7 +450,9 @@ namespace GtfsProvider.CityClient.Krakow
             GTFSRefreshTime = (long)feedMessage.Header.Timestamp;
             foreach (var m in feedMessage.Entities)
             {
-                var convertedTripId = ConvertTripId(m.Vehicle.Trip.TripId);
+                var convertedTripId = ConvertTripId(m.Vehicle.Trip?.TripId);
+                if (convertedTripId == -1)
+                    continue;
                 var vehicle = new GTFSCleanVehicle
                 {
                     Id = long.Parse(m.Id),
@@ -459,10 +461,8 @@ namespace GtfsProvider.CityClient.Krakow
                     Coords = new(m.Vehicle.Position.Latitude, m.Vehicle.Position.Longitude),
                     Timestamp = m.Vehicle.Timestamp
                 };
-                if (convertedTripId != -1)
-                {
-                    gtfsTrips.AddListItem(convertedTripId, vehicle);
-                }
+
+                gtfsTrips.AddListItem(convertedTripId, vehicle);
             }
 
             return true;
@@ -584,8 +584,10 @@ namespace GtfsProvider.CityClient.Krakow
             return true;
         }
 
-        private static long ConvertTripId(string gtfsTripId)
+        private static long ConvertTripId(string? gtfsTripId)
         {
+            if (gtfsTripId == null)
+                return -1;
             var data = gtfsTripId.Split('_');
             if (data.Length < 4 || data[0] != "block" || data[2] != "trip")
                 return -1;

@@ -12,7 +12,7 @@ namespace GtfsProvider.CityClient.Krakow.Extensions
         {
             var id = entry.Id;
             var stopNr = id.Split('_')[2];
-            return stopNr[..^2];
+            return stopNr[..^Math.Min(stopNr.Length, 2)];
         }
     }
 }
