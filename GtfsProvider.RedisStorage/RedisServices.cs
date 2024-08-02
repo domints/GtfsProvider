@@ -14,8 +14,6 @@ namespace GtfsProvider.RedisStorage
 {
     public static class RedisServices
     {
-        public static RedisConnectionProvider ConnectionProvider => _connProvider ?? throw new InvalidOperationException("Redis connection haven't been configured yet!");
-        private static RedisConnectionProvider? _connProvider;
         private static readonly ConcurrentDictionary<string, RedisConnectionProvider> _connProviders = [];
 
         public static IServiceCollection RegisterRedisDataStorage(this IServiceCollection services)
@@ -24,11 +22,9 @@ namespace GtfsProvider.RedisStorage
             return services;
         }
 
-        public static async Task<IRedisCollection<T>> GetCollection<T>(string redisUrl, CancellationToken cancellationToken)
-            where T : notnull, IDocument
+        public static async Task<RedisConnectionProvider> GetConnectionProvider(string redisUrl, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
             if (!_connProviders.TryGetValue(redisUrl, out var connectionProvider))
             {
                 var newProvider = new RedisConnectionProvider(redisUrl);
@@ -37,8 +33,18 @@ namespace GtfsProvider.RedisStorage
                 await connection.CreateIndexAsync(typeof(StoreVehicle));
                 await connection.CreateIndexAsync(typeof(StoreStop));
                 await connection.CreateIndexAsync(typeof(StoreStopGroup));
-                return newProvider.RedisCollection<T>();
+                return newProvider;
             }
+
+            return connectionProvider;
+        }
+
+        public static async Task<IRedisCollection<T>> GetCollection<T>(string redisUrl, CancellationToken cancellationToken)
+            where T : notnull, IDocument
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var connectionProvider = await GetConnectionProvider(redisUrl, cancellationToken);
 
             return connectionProvider.RedisCollection<T>();
         }

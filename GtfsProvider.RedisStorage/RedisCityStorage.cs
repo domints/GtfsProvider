@@ -265,7 +265,7 @@ namespace GtfsProvider.RedisStorage
         public async Task RemoveStopGroups(IEnumerable<string> groupIds, CancellationToken cancellationToken)
         {
             foreach (var key in groupIds.Select(i => $"{IdGenerator.StopGroupPrefix}:{IdGenerator.StopGroup(_city, i)}"))
-                await RedisServices.ConnectionProvider.Connection.UnlinkAsync(key).WaitAsync(cancellationToken);
+                await (await RedisServices.GetConnectionProvider(_redisUrl, cancellationToken)).Connection.UnlinkAsync(key).WaitAsync(cancellationToken);
 
             foreach (var id in groupIds)
                 _stopGroups.TryRemove(id, out BaseStop? _);
@@ -274,7 +274,7 @@ namespace GtfsProvider.RedisStorage
         public async Task RemoveStops(IEnumerable<string> gtfsIds, CancellationToken cancellationToken)
         {
             foreach (var key in gtfsIds.Select(i => $"{IdGenerator.StopPrefix}:{IdGenerator.Stop(_city, i)}"))
-                await RedisServices.ConnectionProvider.Connection.UnlinkAsync(key).WaitAsync(cancellationToken);
+                await (await RedisServices.GetConnectionProvider(_redisUrl, cancellationToken)).Connection.UnlinkAsync(key).WaitAsync(cancellationToken);
         }
 
         public async Task MarkSyncDone(CancellationToken cancellationToken)
