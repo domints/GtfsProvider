@@ -14,6 +14,8 @@ namespace GtfsProvider.RedisStorage
     {
         public static RedisConnectionProvider ConnectionProvider => _connProvider ?? throw new InvalidOperationException("Redis connection haven't been configured yet!");
         private static RedisConnectionProvider? _connProvider;
+        private static readonly Dictionary<string, RedisConnectionProvider> _connProviders = [];
+
         public static IServiceCollection RegisterRedisDataStorage(this IServiceCollection services)
         {
             services.AddSingleton<ICityStorage, RedisCityStorage>();
@@ -26,7 +28,7 @@ namespace GtfsProvider.RedisStorage
             cancellationToken.ThrowIfCancellationRequested();
             if (_connProvider == null)
             {
-                _connProvider = new RedisConnectionProvider("redis://localhost:6379");
+                _connProvider = new RedisConnectionProvider("redis://192.168.50.48:6379");
                 var connection = _connProvider.Connection;
                 await connection.CreateIndexAsync(typeof(StoreVehicle));
                 await connection.CreateIndexAsync(typeof(StoreStop));

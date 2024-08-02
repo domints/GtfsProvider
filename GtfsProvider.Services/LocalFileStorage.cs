@@ -14,7 +14,7 @@ namespace GtfsProvider.Services
     {
         public LocalFileStorage(IConfiguration configuration)
         {
-            BasePath = configuration["FileStoragePath"];
+            BasePath = configuration["FileStoragePath"] ?? "./FileStorage";
         }
 
         private readonly string BasePath;

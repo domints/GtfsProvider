@@ -10,6 +10,7 @@ using GtfsProvider.Common.Models;
 using GtfsProvider.RedisStorage.Models;
 using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Redis.OM;
 using Redis.OM.Searching;
@@ -25,17 +26,21 @@ namespace GtfsProvider.RedisStorage
         private readonly City _city = City.Default;
         private readonly IAppCache _cache;
         private readonly ILogger<RedisCityStorage> _logger;
+        private readonly string _redisUrl;
 
         public virtual City City => _city;
 
-        public RedisCityStorage()
-        { }
+        /*public RedisCityStorage(IConfiguration configuration)
+        {
+            _redisUrl = configuration["RedisUrl"] ?? "redis://localhost:6379";
+        }*/
 
-        public RedisCityStorage(City city, IAppCache cache, ILogger<RedisCityStorage> logger)
+        public RedisCityStorage(City city, IAppCache cache, ILogger<RedisCityStorage> logger, IConfiguration configuration)
         {
             _city = city;
             _cache = cache;
             _logger = logger;
+            _redisUrl = configuration["RedisUrl"] ?? "redis://localhost:6379";
         }
 
         public async Task<AddUpdateResult> AddOrUpdateVehicle(Vehicle vehicle, Dictionary<string, Vehicle> existingSideNos, CancellationToken cancellationToken)
