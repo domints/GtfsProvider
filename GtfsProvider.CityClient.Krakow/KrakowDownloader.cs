@@ -141,11 +141,18 @@ namespace GtfsProvider.CityClient.Krakow
                         }
                     }
 
+                    _logger.LogInformation("Found {stopsCount} stops in GTFS file for {type}.", stops.Count, type);
+
                     var existingIds = (await _dataStorage.GetStopIdsByType(type, cancellationToken))
                         .ToHashSet();
 
+                    _logger.LogInformation("Found {stopsCount} stops in storage for {type}.", existingIds.Count, type);
+
                     var toRemove = existingIds.ExceptIn(stops.Keys.ToHashSet());
                     var toAdd = stops.ExceptIn(existingIds);
+
+                    _logger.LogInformation("Removing {stopsCount} stops for {type}.", toRemove.Count(), type);
+                    _logger.LogInformation("Adding {stopsCount} stops for {type}.", toAdd.Count(), type);
 
                     await _dataStorage.RemoveStops(toRemove, cancellationToken);
                     await _dataStorage.AddStops(toAdd, cancellationToken);
