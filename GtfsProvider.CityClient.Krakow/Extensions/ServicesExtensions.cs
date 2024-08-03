@@ -13,7 +13,7 @@ namespace GtfsProvider.CityClient.Krakow.Extensions
     {
         public static IServiceCollection RegisterKrakowProvider(this IServiceCollection services)
         {
-            services.AddScoped<IDownloader, Downloader>();
+            services.AddScoped<IDownloader, KrakowDownloader>();
             services.AddScoped<ICityLiveDataProvider, KrakowLiveDataProvider>();
             services.AddScoped<IKrakowTTSSClient, KrakowTTSSClient>();
             services.AddTransient<VehicleDbBuilder>();

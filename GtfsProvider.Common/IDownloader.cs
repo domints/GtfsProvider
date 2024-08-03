@@ -11,5 +11,6 @@ namespace GtfsProvider.Common
     {
         City City { get; }
         Task RefreshIfNeeded(CancellationToken cancellationToken);
+        Task LogSummary(CancellationToken cancellationToken);
     }
 }

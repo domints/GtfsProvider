@@ -166,5 +166,7 @@ namespace GtfsProvider.MemoryStorage
         {
             return Task.CompletedTask;
         }
+
+        public Task<int> CountStops(CancellationToken _) => Task.FromResult(_stopGroups.Values.Count);
     }
 }

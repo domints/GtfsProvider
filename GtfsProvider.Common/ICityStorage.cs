@@ -14,6 +14,7 @@ namespace GtfsProvider.Common
         Task<List<Stop>> GetAllStops(CancellationToken cancellationToken);
         Task<Stop?> GetStopById(string stopId, CancellationToken cancellationToken);
         Task<List<string>> GetAllStopIds(CancellationToken cancellationToken);
+        Task<int> CountStops(CancellationToken cancellationToken);
         Task<List<BaseStop>> FindStops(string pattern, int? limit, CancellationToken cancellationToken);
         Task RemoveStops(IEnumerable<string> gtfsIds, CancellationToken cancellationToken);
         Task<IReadOnlyCollection<string>> GetAllStopGroupIds(CancellationToken cancellationToken);

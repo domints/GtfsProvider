@@ -7,6 +7,7 @@ using GtfsProvider.CityClient.Wroclaw.iMPK;
 using GtfsProvider.Common;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Models;
+using Microsoft.Extensions.Logging;
 
 namespace GtfsProvider.CityClient.Wroclaw
 {
@@ -15,13 +16,16 @@ namespace GtfsProvider.CityClient.Wroclaw
         public City City => City.Wroclaw;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly iMPKClient _iMPK;
+        private readonly ILogger<WroclawDownloader> _logger;
         private readonly ICityStorage _dataStorage;
 
         public WroclawDownloader(IHttpClientFactory httpClientFactory,
             IDataStorage dataStorage,
-            iMPKClient iMPK)
+            iMPKClient iMPK,
+            ILogger<WroclawDownloader> logger)
         {
             _iMPK = iMPK;
+            _logger = logger;
             _dataStorage = dataStorage[City];
             _httpClientFactory = httpClientFactory;
         }
@@ -123,6 +127,11 @@ namespace GtfsProvider.CityClient.Wroclaw
                 return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(input.ToLowerInvariant());
 
             return input;
+        }
+
+        public async Task LogSummary(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Got {stopNumber} stops in memory", await _dataStorage.CountStops(cancellationToken));
         }
     }
 }

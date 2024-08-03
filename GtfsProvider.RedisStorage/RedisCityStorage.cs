@@ -297,5 +297,7 @@ namespace GtfsProvider.RedisStorage
         }
 
         private static string VehicleCacheKey(VehicleType type, long uniqueId) => $"{type}:{uniqueId}";
+
+        public Task<int> CountStops(CancellationToken _) => Task.FromResult(_stopGroups.Values.Count);
     }
 }

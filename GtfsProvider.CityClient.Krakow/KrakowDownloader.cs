@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GtfsProvider.CityClient.Krakow
 {
-    public class Downloader : IDownloader
+    public class KrakowDownloader : IDownloader
     {
         private const string _baseUrl = "https://gtfs.ztp.krakow.pl/";
         private const string _gtfZipBus = "GTFS_KRK_A.zip";
@@ -31,15 +31,15 @@ namespace GtfsProvider.CityClient.Krakow
         private readonly VehicleDbBuilder _tramVehicleDbBuilder;
         private readonly VehicleDbBuilder _busVehicleDbBuilder;
         private readonly Regex _fileRegex = new("\\(aktualizacja:\\s([0-9\\-\\ \\:]{8,})\\)\\s<a href=\"([A-z\\._\\/]+)\">([A-z\\\\._]+)<\\/a>", RegexOptions.Compiled | RegexOptions.Multiline);
-        private readonly ILogger<Downloader> _logger;
+        private readonly ILogger<KrakowDownloader> _logger;
 
-        public Downloader(
+        public KrakowDownloader(
             IFileStorage fileStorage,
             IDataStorage dataStorage,
             IHttpClientFactory httpClientFactory,
             VehicleDbBuilder tramVehicleDbBuilder,
             VehicleDbBuilder busVehicleDbBuilder,
-            ILogger<Downloader> logger)
+            ILogger<KrakowDownloader> logger)
         {
             _fileStorage = fileStorage;
             _dataStorage = dataStorage[City];
@@ -161,6 +161,11 @@ namespace GtfsProvider.CityClient.Krakow
                 await _fileStorage.RemoveFile(City, name, cancellationToken);
                 throw;
             }
+        }
+
+        public async Task LogSummary(CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Got {stopNumber} stops in memory", await _dataStorage.CountStops(cancellationToken));
         }
     }
 }
