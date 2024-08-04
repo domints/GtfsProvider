@@ -30,7 +30,7 @@ namespace GtfsProvider.CityClient.Krakow
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VehicleDbBuilder _tramVehicleDbBuilder;
         private readonly VehicleDbBuilder _busVehicleDbBuilder;
-        private readonly Regex _fileRegex = new("\\(aktualizacja:\\s([0-9\\-\\ \\:]{8,})\\)\\s<a href=\"([A-z\\._\\/]+)\">([A-z\\\\._]+)<\\/a>", RegexOptions.Compiled | RegexOptions.Multiline);
+        private readonly Regex _fileRegex = new("aktualizacja:\\s([0-9\\-\\ \\:]{8,})\\s<a href=\"([A-z\\._\\/]+)\">([A-z\\\\._]+)<\\/a>", RegexOptions.Compiled | RegexOptions.Multiline);
         private readonly ILogger<KrakowDownloader> _logger;
 
         public KrakowDownloader(
@@ -54,6 +54,11 @@ namespace GtfsProvider.CityClient.Krakow
             var httpClient = _httpClientFactory.CreateClient($"Downloader_{City}");
             var contents = await httpClient.GetStringAsync(_baseUrl, cancellationToken);
             var fileList = _fileRegex.Matches(contents).Select(m => new { Name = m.Groups[3].Value, Time = DateTime.Parse(m.Groups[1].Value) }).ToList();
+
+            if (fileList.Count == 0) 
+            {
+                _logger.LogError("Krakow GTFS file list either empty or failed to parse!");
+            }
 
             foreach (var file in fileList)
             {
