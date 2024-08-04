@@ -104,8 +104,10 @@ namespace GtfsProvider.CityClient.Krakow
                     Type = g.Aggregate(VehicleType.None, (curr, stop) => curr | stop.Type)
                 }).ToDictionary(k => k.GroupId);
 
+            _logger.LogInformation("Found {stopsCount} stop groups in GTFS file in Krakow.", newStopGroups.Count);
+
             var previousStopGroups = (await _dataStorage.GetAllStopGroupIds(cancellationToken)).ToHashSet();
-            _logger.LogInformation("Found {stopsCount} stop groups in GTFS file in Krakow.", previousStopGroups.Count);
+            _logger.LogInformation("Found {stopsCount} stop groups in memory in Krakow.", previousStopGroups.Count);
 
             var toRemove = previousStopGroups.ExceptIn(newStopGroups.Keys.ToHashSet());
             var toAdd = newStopGroups.ExceptIn(previousStopGroups);
