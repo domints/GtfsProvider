@@ -70,6 +70,7 @@ namespace GtfsProvider.CityClient.Krakow
             try
             {
                 await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus, cancellationToken);
+                _logger.LogInformation("Built vehicle db for {vehicleType} in Krakow", VehicleType.Bus);
             }
             catch (Exception ex)
             {
@@ -79,6 +80,7 @@ namespace GtfsProvider.CityClient.Krakow
             try
             {
                 await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram, cancellationToken);
+                _logger.LogInformation("Built vehicle db for {vehicleType} in Krakow", VehicleType.Tram);
             }
             catch (Exception ex)
             {
@@ -89,10 +91,10 @@ namespace GtfsProvider.CityClient.Krakow
             List<BaseStop> tramStops = new();
 
             if ((await _fileStorage.GetFileTime(City, _gtfZipBus, cancellationToken)).HasValue)
-                busStops = await ParseGtfsZip(_gtfZipBus, VehicleType.Bus, cancellationToken);
+                busStops = await ParseGtfsZipStops(_gtfZipBus, VehicleType.Bus, cancellationToken);
 
             if ((await _fileStorage.GetFileTime(City, _gtfZipTram, cancellationToken)).HasValue)
-                tramStops = await ParseGtfsZip(_gtfZipTram, VehicleType.Tram, cancellationToken);
+                tramStops = await ParseGtfsZipStops(_gtfZipTram, VehicleType.Tram, cancellationToken);
 
             var newStopGroups = busStops.Concat(tramStops).GroupBy(g => g.GroupId)
                 .Select(g => new BaseStop
@@ -103,9 +105,13 @@ namespace GtfsProvider.CityClient.Krakow
                 }).ToDictionary(k => k.GroupId);
 
             var previousStopGroups = (await _dataStorage.GetAllStopGroupIds(cancellationToken)).ToHashSet();
+            _logger.LogInformation("Found {stopsCount} stop groups in GTFS file in Krakow.", previousStopGroups.Count);
 
             var toRemove = previousStopGroups.ExceptIn(newStopGroups.Keys.ToHashSet());
             var toAdd = newStopGroups.ExceptIn(previousStopGroups);
+
+            _logger.LogInformation("Removing {stopsCount} stop groups in Krakow.", toRemove.Count());
+            _logger.LogInformation("Adding {stopsCount} stop groups in Krakow.", toAdd.Count());
 
             await _dataStorage.RemoveStopGroups(toRemove, cancellationToken);
             await _dataStorage.AddStopGroups(toAdd, cancellationToken);
@@ -113,8 +119,9 @@ namespace GtfsProvider.CityClient.Krakow
             await _dataStorage.MarkSyncDone(cancellationToken);
         }
 
-        private async Task<List<BaseStop>> ParseGtfsZip(string name, VehicleType type, CancellationToken cancellationToken)
+        private async Task<List<BaseStop>> ParseGtfsZipStops(string name, VehicleType type, CancellationToken cancellationToken)
         {
+            _logger.LogInformation("Parsing GTFS zip stops file for {vehicleType}", type);
             try
             {
                 using (ZipFile zip = new ZipFile(await _fileStorage.LoadFile(City, name, cancellationToken)))

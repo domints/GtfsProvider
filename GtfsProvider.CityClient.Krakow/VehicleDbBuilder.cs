@@ -63,6 +63,7 @@ namespace GtfsProvider.CityClient.Krakow
 
         public async Task<bool> Build(VehicleType type, string positionsFileName, CancellationToken cancellationToken)
         {
+            _logger.LogInformation("Building vehicleDb for {type}", type);
             var matchRulesFetchSuccess = await BuildMatchRules(type, cancellationToken);
             if (!matchRulesFetchSuccess)
                 return false;
