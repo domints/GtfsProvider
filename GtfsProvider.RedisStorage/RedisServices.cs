@@ -33,6 +33,7 @@ namespace GtfsProvider.RedisStorage
                 await connection.CreateIndexAsync(typeof(StoreVehicle));
                 await connection.CreateIndexAsync(typeof(StoreStop));
                 await connection.CreateIndexAsync(typeof(StoreStopGroup));
+                await connection.CreateIndexAsync(typeof(StoreCalendar));
                 return newProvider;
             }
 

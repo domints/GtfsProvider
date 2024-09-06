@@ -7,6 +7,7 @@ using GtfsProvider.Common;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
+using GtfsProvider.Common.Models.Gtfs;
 
 namespace GtfsProvider.MemoryStorage
 {
@@ -168,5 +169,15 @@ namespace GtfsProvider.MemoryStorage
         }
 
         public Task<int> CountStops(CancellationToken _) => Task.FromResult(_stopGroups.Values.Count);
+
+        public Task<IReadOnlyCollection<CalendarEntry>> GetCurrentGtfsCalendar(VehicleType type, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task AddOrUpdateGtfsCalendar(List<CalendarEntry> entries, VehicleType type, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

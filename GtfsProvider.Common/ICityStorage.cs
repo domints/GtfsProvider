@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Models;
+using GtfsProvider.Common.Models.Gtfs;
 
 namespace GtfsProvider.Common
 {
@@ -33,6 +30,9 @@ namespace GtfsProvider.Common
         Task<Vehicle?> GetVehicleBySideNo(string sideNo, CancellationToken cancellationToken);
         Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(CancellationToken cancellationToken);
         Task<IReadOnlyCollection<Vehicle>> GetAllVehicles(VehicleType type, CancellationToken cancellationToken);
+
+        Task<IReadOnlyCollection<CalendarEntry>> GetCurrentGtfsCalendar(VehicleType type, CancellationToken cancellationToken);
+        Task AddOrUpdateGtfsCalendar(List<CalendarEntry> entries, VehicleType type, CancellationToken cancellationToken);
 
         Task MarkSyncDone(CancellationToken _);
     }

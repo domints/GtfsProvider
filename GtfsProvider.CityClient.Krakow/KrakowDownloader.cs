@@ -72,34 +72,20 @@ namespace GtfsProvider.CityClient.Krakow
                 }
             }
 
-            try
-            {
-                await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus, cancellationToken);
-                _logger.LogInformation("Built vehicle db for {vehicleType} in Krakow", VehicleType.Bus);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to load buses for Krakow! Continuing without them.");
-            }
-
-            try
-            {
-                await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram, cancellationToken);
-                _logger.LogInformation("Built vehicle db for {vehicleType} in Krakow", VehicleType.Tram);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to load trams for Krakow! Continuing without them.");
-            }
-
             List<BaseStop> busStops = new();
             List<BaseStop> tramStops = new();
 
             if ((await _fileStorage.GetFileTime(City, _gtfZipBus, cancellationToken)).HasValue)
+            {
                 busStops = await ParseGtfsZipStops(_gtfZipBus, VehicleType.Bus, cancellationToken);
+                await ParseGtfsZipCalendar(_gtfZipBus, VehicleType.Bus, cancellationToken);
+            }
 
             if ((await _fileStorage.GetFileTime(City, _gtfZipTram, cancellationToken)).HasValue)
+            {
                 tramStops = await ParseGtfsZipStops(_gtfZipTram, VehicleType.Tram, cancellationToken);
+                await ParseGtfsZipCalendar(_gtfZipBus, VehicleType.Tram, cancellationToken);
+            }
 
             var newStopGroups = busStops.Concat(tramStops).GroupBy(g => g.GroupId)
                 .Select(g => new BaseStop
@@ -123,7 +109,60 @@ namespace GtfsProvider.CityClient.Krakow
             await _dataStorage.RemoveStopGroups(toRemove, cancellationToken);
             await _dataStorage.AddStopGroups(toAdd, cancellationToken);
 
+            try
+            {
+                await _busVehicleDbBuilder.Build(VehicleType.Bus, _positionsFileBus, cancellationToken);
+                _logger.LogInformation("Built vehicle db for {vehicleType} in Krakow", VehicleType.Bus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load buses for Krakow! Continuing without them.");
+            }
+
+            try
+            {
+                await _tramVehicleDbBuilder.Build(VehicleType.Tram, _positionsFileTram, cancellationToken);
+                _logger.LogInformation("Built vehicle db for {vehicleType} in Krakow", VehicleType.Tram);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load trams for Krakow! Continuing without them.");
+            }
+
             await _dataStorage.MarkSyncDone(cancellationToken);
+        }
+
+        private async Task<List<CalendarEntry>> ParseGtfsZipCalendar(string name, VehicleType type, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Parsing GTFS zip calendar file for {vehicleType}", type);
+            try
+            {
+                using (ZipFile zip = new ZipFile(await _fileStorage.LoadFile(City, name, cancellationToken)))
+                {
+                    var calendarZipEntry = zip.GetEntry("calendar.txt");
+                    List<CalendarEntry> entries = new();
+                    using (var stopsStream = zip.GetInputStream(calendarZipEntry))
+                    using (var reader = new StreamReader(stopsStream))
+                    using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                    {
+                        while (await csv.ReadAsync())
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            var entry = csv.GetRecord<CalendarEntry>();
+                            entries.Add(entry);
+                        }
+                    }
+
+                    await _dataStorage.AddOrUpdateGtfsCalendar(entries, type, cancellationToken);
+                    return entries;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load zip file {fileName} for city {city}. Ramoving that file.", name, City);
+                await _fileStorage.RemoveFile(City, name, cancellationToken);
+                throw;
+            }
         }
 
         private async Task<List<BaseStop>> ParseGtfsZipStops(string name, VehicleType type, CancellationToken cancellationToken)

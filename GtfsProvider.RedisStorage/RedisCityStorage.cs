@@ -7,6 +7,7 @@ using GtfsProvider.Common;
 using GtfsProvider.Common.Enums;
 using GtfsProvider.Common.Extensions;
 using GtfsProvider.Common.Models;
+using GtfsProvider.Common.Models.Gtfs;
 using GtfsProvider.RedisStorage.Models;
 using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
@@ -299,5 +300,25 @@ namespace GtfsProvider.RedisStorage
         private static string VehicleCacheKey(VehicleType type, long uniqueId) => $"{type}:{uniqueId}";
 
         public Task<int> CountStops(CancellationToken _) => Task.FromResult(_stopGroups.Values.Count);
+
+        public async Task<IReadOnlyCollection<CalendarEntry>> GetCurrentGtfsCalendar(VehicleType type, CancellationToken cancellationToken)
+        {
+            var calendarEntries = await RedisServices.GetCollection<StoreCalendar>(_redisUrl, cancellationToken);
+
+            var result = new List<CalendarEntry>();
+            await foreach (var calendarEntry in calendarEntries.Where(v => v.City == _city && v.ServiceType == type))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                result.Add(calendarEntry.ToAppModel());
+            }
+
+            return result;
+        }
+
+        public async Task AddOrUpdateGtfsCalendar(List<CalendarEntry> entries, VehicleType type, CancellationToken cancellationToken)
+        {
+            var calendarEntries = await RedisServices.GetCollection<StoreCalendar>(_redisUrl, cancellationToken);
+            await calendarEntries.UpdateAsync(entries.Select(e => e.ToStoreModel(_city, type)));
+        }
     }
 }

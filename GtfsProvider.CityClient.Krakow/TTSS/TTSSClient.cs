@@ -99,6 +99,8 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
                 if (client == null)
                     return null;
 
+                client.Timeout = TimeSpan.FromSeconds(10);
+
                 var jsonData = string.Empty;
                 try
                 {
