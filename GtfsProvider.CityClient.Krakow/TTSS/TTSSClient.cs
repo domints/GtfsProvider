@@ -21,7 +21,7 @@ namespace GtfsProvider.CityClient.Krakow.TTSS
     public class KrakowTTSSClient : IKrakowTTSSClient
     {
         private const string busHost = "http://ttss.mpk.krakow.pl/";
-        private const string tramHost = "http://www.ttss.krakow.pl/";
+        private const string tramHost = "https://www.ttss.krakow.pl/";
         private const string stopPassagesPath = "internetservice/services/passageInfo/stopPassages/stop";
         private const string stopPostPassagesPath = "internetservice/services/passageInfo/stopPassages/stopPost";
         private const string tripPassagesPath = "internetservice/services/tripInfo/tripPassages";
