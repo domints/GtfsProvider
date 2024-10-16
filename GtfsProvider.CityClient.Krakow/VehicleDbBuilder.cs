@@ -127,6 +127,7 @@ namespace GtfsProvider.CityClient.Krakow
                     unmatchedTtss.Add(te.Value);
                 }
             }
+            
             Dictionary<long, Vehicle> byGtfsId = matchedSingle.ToDictionary(k => k.vehicle.GtfsId, v => v.vehicle);
             Dictionary<long, Vehicle> byTtssId = matchedSingle.ToDictionary(k => k.vehicle.UniqueId, v => v.vehicle);
             Dictionary<long, GTFSCleanVehicle> unmatchedGtfsDict = unmatchedGtfs.SelectMany(u => u).ToDictionary(u => u.Id);
