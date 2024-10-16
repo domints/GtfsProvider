@@ -249,7 +249,7 @@ namespace GtfsProvider.RedisStorage
                 var veh = await vehicles.Where(v => v.City == _city && v.ModelType == type && v.UniqueId == vehicleId).FirstOrDefaultAsync().WaitAsync(cancellationToken);
                 var appVeh = veh?.ToAppModel(_modelCache);
 
-                e.AbsoluteExpirationRelativeToNow = appVeh == null ? TimeSpan.FromSeconds(15) : TimeSpan.FromDays(2);
+                e.AbsoluteExpirationRelativeToNow = appVeh == null ? TimeSpan.FromSeconds(15) : TimeSpan.FromMinutes(15);
 
                 return appVeh;
             });

@@ -181,7 +181,7 @@ namespace GtfsProvider.CityClient.Krakow
                 .First();
 
             var oldVehicles = await _storage.GetAllVehicles(cancellationToken);
-            foreach (var v in oldVehicles.Where(ov => ov.Model.Type == type))
+            foreach (var v in oldVehicles.Where(ov => !ov.IsHeuristic && ov.Model.Type == type))
             {
                 if (!byTtssId.ContainsKey(v.UniqueId) && !byGtfsId.ContainsKey(v.GtfsId))
                 {
